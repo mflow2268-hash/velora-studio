@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velora Studio — Enterprise Edition v7.0</title>
+<style>
+:root{
+  --bg:#06060a; --panel:#0a0a10;
+  --card-1:#26262f; --card-2:#1a1a22; --card-3:#0e0e14;
+  --border:#2e2e3a; --border-2:#444452;
+  --text:#eef0f4; --muted:#8e8e9a; --muted-2:#5e5e68;
+  --green:#56d488; --blue:#66b0ee; --red:#f06a6a;
+  --amber:#e8b854; --purple:#a889e8; --gold:#f4d99b;
+  --topbar-h:52px; --sidebar-w:170px; --bottom-h:30px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","SF Pro Text",system-ui,Arial,sans-serif;font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#3a3a48,#1e1e28);border-radius:5px;border:1px solid #2a2a34;transition:background .3s;}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#4a4a5a,#2a2a34);}
+button{font-family:inherit;cursor:pointer;}
+
+@keyframes pageEnter{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes cardEnter{0%{opacity:0;transform:translateY(22px) scale(.98);}100%{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes rowEnter{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:translateX(0);}}
+@keyframes rippleGo{to{transform:scale(4);opacity:0;}}
+@keyframes loadSlide{0%{width:0;left:0;}50%{width:65%;left:17%;}100%{width:0;left:100%;}}
+@keyframes toastIn{from{opacity:0;transform:translateX(110%) scale(.9);}to{opacity:1;transform:translateX(0) scale(1);}}
+@keyframes toastOut{to{opacity:0;transform:translateX(110%) scale(.9);}}
+@keyframes modalPop{0%{opacity:0;transform:scale(.92) translateY(14px);}60%{opacity:1;transform:scale(1.01) translateY(-2px);}100%{opacity:1;transform:scale(1) translateY(0);}}
+@keyframes modalOut{to{opacity:0;transform:scale(.96) translateY(8px);}}
+@keyframes barGrow{from{height:0 !important;opacity:.3;filter:blur(4px);}to{opacity:1;filter:blur(0);}}
+@keyframes focusPulse{0%{box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 0 rgba(232,184,84,.5);}100%{box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 3px rgba(232,184,84,.15);}}
+@keyframes successPulse{0%{transform:scale(0) rotate(-45deg);opacity:0;}60%{transform:scale(1.2) rotate(0deg);}100%{transform:scale(1) rotate(0deg);opacity:1;}}
+@keyframes spin360{from{transform:rotate(0);}to{transform:rotate(360deg);}}
+@keyframes toastProgress{from{width:100%;}to{width:0;}}
+@keyframes sendingDot{0%,80%,100%{opacity:.3;transform:translateY(0);}40%{opacity:1;transform:translateY(-3px);}}
+@keyframes splashFade{0%{opacity:0;transform:scale(.9);}20%{opacity:1;transform:scale(1);}80%{opacity:1;}100%{opacity:0;transform:scale(1.05);}}
+@keyframes obFadeOut{to{opacity:0;visibility:hidden;}}
+@keyframes obStepIn{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes kpiEnter{0%{opacity:0;transform:translateY(24px) scale(.94);}60%{opacity:1;transform:translateY(-2px) scale(1.01);}100%{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes navEnter{0%{opacity:0;transform:translateX(-20px);}100%{opacity:1;transform:translateX(0);}}
+@keyframes subEnter{0%{opacity:0;transform:translateX(-12px);}100%{opacity:1;transform:translateX(0);}}
+@keyframes iconBounce{0%,100%{transform:translateY(0) rotate(0);}30%{transform:translateY(-4px) rotate(-8deg);}60%{transform:translateY(-1px) rotate(4deg);}}
+@keyframes logoPop{0%{transform:scale(1);}50%{transform:scale(1.12);}100%{transform:scale(1);}}
+@keyframes amberGlow{0%,100%{box-shadow:0 0 0 0 rgba(232,184,84,.35);}50%{box-shadow:0 0 20px 4px rgba(232,184,84,.12);}}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes floatUp{0%{opacity:0;transform:translateY(16px);}100%{opacity:1;transform:translateY(0);}}
+@keyframes tabSlide{0%{transform:translateX(-100%);}100%{transform:translateX(0);}}
+@keyframes pulseSoft{0%,100%{opacity:1;}50%{opacity:.6;}}
+@keyframes barShimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+
+.kpi,.card,.tbl-row,.total-strip,.btn,.nav-item,.sub-item,.about-card,.hero,.kpi *,.tbl-head{
+  transition:transform .35s cubic-bezier(.2,.9,.3,1),box-shadow .35s cubic-bezier(.2,.9,.3,1),border-color .3s ease,background .3s ease,color .25s ease,opacity .3s ease;
+}
+
+.ripple{position:absolute;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,255,255,.55) 0%,rgba(255,255,255,.15) 40%,rgba(255,255,255,0) 70%);transform:scale(0);animation:rippleGo .65s cubic-bezier(.2,.9,.3,1);z-index:100;}
+.btn,.btn-refresh,.btn-create-top,.s-clear,.nav-item,.sub-item,.tbl-row.clickable{position:relative;overflow:hidden;}
+
+#loadingbar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,transparent,var(--amber) 20%,var(--gold) 50%,var(--amber) 80%,transparent);z-index:9999;border-radius:0 2px 2px 0;box-shadow:0 0 12px var(--amber),0 0 24px rgba(232,184,84,.5);animation:loadSlide 1.1s cubic-bezier(.4,0,.6,1) infinite;pointer-events:none;}
+
+#toasts{position:fixed;bottom:48px;right:22px;z-index:9998;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+.toast{min-width:280px;max-width:400px;pointer-events:auto;padding:14px 16px;border-radius:9px;background:linear-gradient(180deg,#26262f 0%,#14141a 100%);border:1px solid var(--border);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 12px 28px rgba(0,0,0,.75);animation:toastIn .55s cubic-bezier(.2,.9,.3,1.35) both;display:flex;gap:12px;align-items:flex-start;position:relative;overflow:hidden;}
+.toast.out{animation:toastOut .35s ease-in forwards;}
+.toast-ico{width:34px;height:34px;border-radius:50%;flex:0 0 34px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;animation:successPulse .55s cubic-bezier(.2,.9,.3,1.5) both;}
+.toast.green .toast-ico{background:linear-gradient(180deg,#2a5539,#0e1e14);color:#b8f5ce;border:1px solid var(--green);}
+.toast.red .toast-ico{background:linear-gradient(180deg,#4a1e1e,#140a0a);color:#ffb8b8;border:1px solid var(--red);}
+.toast.blue .toast-ico{background:linear-gradient(180deg,#22406a,#0c182a);color:#b8dcff;border:1px solid var(--blue);}
+.toast.amber .toast-ico{background:linear-gradient(180deg,#4a3c1e,#14100a);color:#f4d99b;border:1px solid var(--amber);}
+.toast-body{flex:1;min-width:0;}
+.toast-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.toast-msg{font-size:11.5px;color:var(--muted);line-height:1.5;word-wrap:break-word;}
+.toast-close{background:transparent;border:none;color:var(--muted-2);font-size:14px;padding:2px 4px;cursor:pointer;line-height:1;transition:transform .25s,color .25s;}
+.toast-close:hover{color:var(--text);transform:rotate(90deg) scale(1.15);}
+.toast-progress{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--gold));animation:toastProgress 3.5s linear forwards;box-shadow:0 0 8px var(--amber);}
+
+.overlay{position:fixed;inset:0;background:rgba(2,2,5,0);backdrop-filter:blur(0);transition:background .3s ease,backdrop-filter .3s ease;display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;overflow:hidden;}
+.overlay.show{background:rgba(2,2,5,.82);backdrop-filter:blur(6px);}
+.modal{position:relative;background:linear-gradient(180deg,#2a2a35 0%,#1a1a22 45%,#0e0e14 100%);border:1px solid var(--border-2);border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 30px 80px rgba(0,0,0,.9);max-height:88vh;display:flex;flex-direction:column;animation:modalPop .4s cubic-bezier(.2,.9,.3,1.2) both;min-width:340px;max-width:94vw;overflow:hidden;}
+.overlay.closing .modal{animation:modalOut .22s ease-in forwards;}
+
+#splash{position:fixed;inset:0;background:var(--bg);z-index:99999;display:flex;align-items:center;justify-content:center;animation:splashFade 1.6s ease-out forwards;pointer-events:none;}
+#splash .sp-logo{width:80px;height:80px;border-radius:18px;background:linear-gradient(160deg,#4a3c1e 0%,#2e2412 45%,#1a1308 100%);border:2px solid #8a6c2e;box-shadow:inset 0 2px 0 rgba(255,240,200,.55),0 0 60px rgba(232,184,84,.6),0 20px 60px rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;color:var(--gold);text-shadow:0 2px 4px rgba(0,0,0,.6),0 0 24px rgba(244,217,155,.8);animation:logoPop 1.5s ease-in-out infinite;}
+
+#topbar{position:fixed;top:0;left:0;right:0;height:var(--topbar-h);background:linear-gradient(180deg,#14141b 0%,#0a0a10 60%,#07070c 100%);border-bottom:1px solid #1a1a22;box-shadow:0 3px 12px rgba(0,0,0,.6);z-index:40;}
+.logo-zone{position:absolute;left:16px;top:12px;width:28px;height:28px;transition:transform .35s cubic-bezier(.2,.9,.3,1.2);}
+.logo-zone:hover{transform:scale(1.08);}
+.logo-glow{position:absolute;left:-10px;top:-10px;width:48px;height:48px;border-radius:50%;background:radial-gradient(circle,rgba(232,184,84,.45) 0%,rgba(232,184,84,0) 70%);pointer-events:none;animation:amberGlow 3s ease-in-out infinite;transition:opacity .35s;}
+.logo-zone:hover .logo-glow{opacity:1;background:radial-gradient(circle,rgba(232,184,84,.7) 0%,rgba(232,184,84,0) 70%);}
+.logo{position:absolute;inset:0;border-radius:7px;background:linear-gradient(180deg,#4a3c1e 0%,#2e2412 45%,#1a1308 100%);border:1px solid #8a6c2e;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--gold);z-index:1;transition:transform .35s cubic-bezier(.2,.9,.3,1.5);}
+.logo-zone:hover .logo{transform:rotate(-6deg) scale(1.1);}
+.searchbox{position:absolute;left:50%;top:12px;transform:translateX(-50%);width:380px;height:28px;border-radius:7px;background:linear-gradient(180deg,#1a1a22 0%,#0a0a10 100%);border:1px solid var(--border);display:flex;align-items:center;cursor:pointer;padding:0 10px;gap:10px;transition:border-color .3s,box-shadow .3s,transform .3s;}
+.searchbox:hover{border-color:var(--border-2);box-shadow:0 0 0 3px rgba(232,184,84,.08);transform:translateX(-50%) scale(1.01);}
+.qmark{width:18px;height:18px;border-radius:50%;flex:0 0 18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--muted);background:#22222c;border:1px solid #2e2e3a;transition:transform .3s;}
+.searchbox:hover .qmark{transform:scale(1.1);}
+.stxt{flex:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stxt.filter{color:var(--amber);font-weight:600;}
+.s-clear{height:20px;padding:0 8px;border-radius:5px;font-size:10px;font-weight:700;background:#3a2e18;border:1px solid var(--amber);color:var(--amber);transition:background .25s,transform .2s;}
+.s-clear:hover{background:#4a3c1e;transform:scale(1.05);}
+.top-right{position:absolute;right:20px;top:12px;display:flex;gap:8px;}
+.btn-refresh{width:34px;height:28px;border-radius:7px;background:linear-gradient(180deg,#22222c 0%,#131319 100%);border:1px solid var(--border);color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:transform .3s,color .3s,border-color .3s,box-shadow .3s;}
+.btn-refresh:hover{color:var(--text);border-color:var(--border-2);transform:translateY(-1px) scale(1.05);box-shadow:0 4px 12px rgba(0,0,0,.4);}
+.btn-refresh.spin{animation:spin360 .6s;}
+.btn-create-top{height:28px;padding:0 16px;border-radius:7px;background:linear-gradient(180deg,#2a5539 0%,#0e1e14 100%);border:1px solid var(--green);color:#b8f5ce;font-size:12px;font-weight:700;transition:transform .3s,background .3s,box-shadow .3s;}
+.btn-create-top:hover{background:#346842;transform:translateY(-1px) scale(1.02);box-shadow:0 6px 16px rgba(86,212,136,.2);}
+.btn-create-top:active{transform:scale(.98);}
+
+#sidebar{position:fixed;top:var(--topbar-h);left:0;width:var(--sidebar-w);bottom:var(--bottom-h);background:linear-gradient(180deg,#0a0a10 0%,#06060a 100%);border-right:1px solid #16161c;overflow-y:auto;overflow-x:hidden;padding-top:6px;z-index:30;}
+.nav-item{position:relative;height:36px;cursor:pointer;display:flex;align-items:center;overflow:hidden;animation:navEnter .45s cubic-bezier(.2,.9,.3,1.2) both;}
+.nav-item:nth-child(1){animation-delay:.02s;}
+.nav-item:nth-child(2){animation-delay:.04s;}
+.nav-item:nth-child(3){animation-delay:.06s;}
+.nav-item:nth-child(4){animation-delay:.08s;}
+.nav-item:nth-child(5){animation-delay:.1s;}
+.nav-item:nth-child(6){animation-delay:.12s;}
+.nav-item:nth-child(7){animation-delay:.14s;}
+.nav-item:nth-child(8){animation-delay:.16s;}
+.nav-item:nth-child(9){animation-delay:.18s;}
+.nav-item:nth-child(10){animation-delay:.2s;}
+.nav-item:nth-child(11){animation-delay:.22s;}
+.nav-item:nth-child(12){animation-delay:.24s;}
+.nav-item:nth-child(13){animation-delay:.26s;}
+.nav-item:nth-child(14){animation-delay:.28s;}
+.nav-item:nth-child(15){animation-delay:.3s;}
+.nav-item:hover{background:rgba(255,255,255,.04);}
+.nav-item.active{margin:0 8px;width:calc(100% - 16px);border-radius:8px;background:linear-gradient(180deg,#4a3c1e 0%,#14100a 100%);border:1px solid var(--amber);box-shadow:0 4px 14px rgba(232,184,84,.15);}
+.nav-item.active::before{content:'';position:absolute;left:-9px;top:4px;bottom:4px;width:3px;background:linear-gradient(180deg,#f4d99b,#c99a3a);border-radius:0 2px 2px 0;box-shadow:0 0 12px rgba(232,184,84,.9);animation:tabSlide .5s cubic-bezier(.2,.9,.3,1.2) both;}
+.nav-ico{width:22px;height:22px;border-radius:50%;flex:0 0 22px;margin-left:14px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:#22222c;border:1px solid #2e2e3a;color:var(--muted);}
+.nav-item.active .nav-ico{background:#5a4a24;border-color:var(--amber);color:var(--gold);box-shadow:0 0 12px rgba(232,184,84,.35);}
+.nav-item:hover .nav-ico{animation:iconBounce .6s cubic-bezier(.2,.9,.3,1.5);}
+.nav-lbl{margin-left:10px;font-size:12.5px;color:var(--muted);white-space:nowrap;}
+.nav-item.active .nav-lbl{color:var(--gold);font-weight:600;}
+.nav-item:hover .nav-lbl{color:var(--text);}
+.sub-item{height:24px;cursor:pointer;display:flex;align-items:center;animation:subEnter .4s cubic-bezier(.2,.9,.3,1.2) both;}
+.sub-item:hover{background:rgba(255,255,255,.03);}
+.sub-dot{width:4px;height:4px;border-radius:50%;background:#5e5e68;margin-left:26px;flex:0 0 4px;transition:all .3s;}
+.sub-lbl{margin-left:8px;font-size:11.5px;color:var(--muted-2);white-space:nowrap;transition:color .25s,transform .25s;}
+.sub-item.active .sub-dot{background:var(--amber);box-shadow:0 0 8px rgba(232,184,84,.9);}
+.sub-item.active .sub-lbl{color:var(--gold);font-weight:600;}
+.sub-item:hover .sub-lbl{color:#b8b8c4;transform:translateX(2px);}
+.nav-badge{margin-left:auto;margin-right:12px;background:#3a2e18;border:1px solid var(--amber);color:var(--amber);font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;transition:transform .3s;}
+.nav-badge.reply{margin-left:6px;margin-right:0;background:#2a5539;border-color:var(--green);color:#b8f5ce;}
+.nav-item:hover .nav-badge{transform:scale(1.15);}
+
+#content{position:fixed;top:var(--topbar-h);left:var(--sidebar-w);right:0;bottom:var(--bottom-h);overflow-y:auto;padding:26px 28px 40px;}
+.page-greet{font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.1;animation:floatUp .6s cubic-bezier(.2,.9,.3,1.1) both;}
+.page-sub{font-size:13px;color:var(--muted);margin-top:4px;animation:floatUp .6s cubic-bezier(.2,.9,.3,1.1) both;animation-delay:.08s;}
+.page-h1{font-size:18px;font-weight:700;letter-spacing:-.2px;animation:floatUp .5s cubic-bezier(.2,.9,.3,1.1) both;}
+.page-h2{font-size:14px;font-weight:700;}
+
+.kpi-grid{display:grid;gap:12px;margin-top:22px;}
+.kpi-grid.g5{grid-template-columns:repeat(5,1fr);}
+.kpi-grid.g3{grid-template-columns:repeat(3,1fr);}
+.kpi{position:relative;height:88px;border-radius:8px;background:linear-gradient(180deg,#2a2a35 0%,#0e0e14 100%);border:1px solid var(--border);overflow:hidden;cursor:pointer;animation:kpiEnter .7s cubic-bezier(.2,.9,.3,1.2) both;}
+.kpi:nth-child(1){animation-delay:.1s;}
+.kpi:nth-child(2){animation-delay:.18s;}
+.kpi:nth-child(3){animation-delay:.26s;}
+.kpi:nth-child(4){animation-delay:.34s;}
+.kpi:nth-child(5){animation-delay:.42s;}
+.kpi:nth-child(6){animation-delay:.5s;}
+.kpi:nth-child(7){animation-delay:.58s;}
+.kpi:nth-child(8){animation-delay:.66s;}
+.kpi:nth-child(9){animation-delay:.74s;}
+.kpi:nth-child(10){animation-delay:.82s;}
+.kpi:nth-child(11){animation-delay:.9s;}
+.kpi:nth-child(12){animation-delay:.98s;}
+.kpi:nth-child(13){animation-delay:1.06s;}
+.kpi:hover{border-color:var(--border-2);transform:translateY(-5px) scale(1.02);box-shadow:0 14px 32px rgba(0,0,0,.55),0 0 0 1px rgba(232,184,84,.08);}
+.kpi .bar{position:absolute;left:2px;top:11px;bottom:11px;width:3px;border-radius:2px;transition:all .35s cubic-bezier(.2,.9,.3,1.2);}
+.kpi:hover .bar{top:6px;bottom:6px;box-shadow:0 0 12px currentColor;}
+.kpi .t{position:absolute;left:16px;top:11px;font-size:10px;font-weight:700;letter-spacing:.9px;color:var(--muted);text-transform:uppercase;transition:color .3s;}
+.kpi:hover .t{color:var(--text);}
+.kpi .v{position:absolute;left:16px;top:30px;font-size:20px;font-weight:700;color:var(--text);line-height:1;}
+.kpi .s{position:absolute;left:16px;top:62px;font-size:11px;color:var(--muted-2);}
+
+.card{position:relative;border-radius:8px;background:linear-gradient(180deg,#26262f 0%,#0e0e14 100%);border:1px solid var(--border);overflow:hidden;animation:cardEnter .7s cubic-bezier(.2,.9,.3,1.1) both;animation-delay:.25s;}
+.card:hover{border-color:var(--border-2);box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.card-hd{font-size:14px;font-weight:700;color:var(--text);}
+.card-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;}
+.grow{flex:1;min-width:0;}
+.mt14{margin-top:14px;} .mt18{margin-top:18px;}
+
+.btn{height:30px;padding:0 14px;border-radius:7px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border);color:var(--muted);background:linear-gradient(180deg,#26262f 0%,#14141a 100%);white-space:nowrap;position:relative;overflow:hidden;}
+.btn:hover{color:var(--text);border-color:var(--border-2);transform:translateY(-2px) scale(1.02);box-shadow:0 6px 16px rgba(0,0,0,.5);}
+.btn:active{transform:translateY(0) scale(.96);}
+.btn.green{background:linear-gradient(180deg,#2a5539 0%,#0e1e14 100%);border-color:var(--green);color:#b8f5ce;}
+.btn.green:hover{background:linear-gradient(180deg,#346842,#0e1e14);box-shadow:0 6px 16px rgba(86,212,136,.25);}
+.btn.blue{background:linear-gradient(180deg,#22406a 0%,#0c182a 100%);border-color:var(--blue);color:#b8dcff;}
+.btn.blue:hover{background:linear-gradient(180deg,#2a4f7e,#0c182a);box-shadow:0 6px 16px rgba(102,176,238,.25);}
+.btn.amber{background:linear-gradient(180deg,#4a3c1e 0%,#14100a 100%);border-color:var(--amber);color:#f4d99b;}
+.btn.amber:hover{background:linear-gradient(180deg,#5a4a24,#14100a);box-shadow:0 6px 16px rgba(232,184,84,.25);}
+.btn.red{background:linear-gradient(180deg,#4a1e1e 0%,#140a0a 100%);border-color:var(--red);color:#ffb8b8;}
+.btn.red:hover{background:linear-gradient(180deg,#5a2626,#140a0a);box-shadow:0 6px 16px rgba(240,106,106,.25);}
+.btn.ghost{background:linear-gradient(180deg,#22222c,#101016);}
+
+.tbl{margin-top:4px;}
+.tbl-head{display:flex;align-items:center;height:26px;padding:0 14px;background:linear-gradient(180deg,#1a1a22 0%,#0e0e14 100%);border:1px solid var(--border);border-radius:7px;font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--muted);text-transform:uppercase;animation:floatUp .5s cubic-bezier(.2,.9,.3,1.1) both;animation-delay:.3s;}
+.tbl-row{display:flex;align-items:center;height:26px;padding:0 14px;margin-top:3px;background:linear-gradient(180deg,#22222c 0%,#0f0f16 100%);border:1px solid var(--border);border-radius:6px;font-size:12px;animation:rowEnter .45s cubic-bezier(.2,.9,.3,1.2) both;}
+.tbl-row:nth-child(1){animation-delay:.35s;}
+.tbl-row:nth-child(2){animation-delay:.39s;}
+.tbl-row:nth-child(3){animation-delay:.43s;}
+.tbl-row:nth-child(4){animation-delay:.47s;}
+.tbl-row:nth-child(5){animation-delay:.51s;}
+.tbl-row:nth-child(6){animation-delay:.55s;}
+.tbl-row:nth-child(7){animation-delay:.59s;}
+.tbl-row:nth-child(8){animation-delay:.63s;}
+.tbl-row:nth-child(9){animation-delay:.67s;}
+.tbl-row:nth-child(10){animation-delay:.71s;}
+.tbl-row:nth-child(11){animation-delay:.75s;}
+.tbl-row:nth-child(12){animation-delay:.79s;}
+.tbl-row:nth-child(13){animation-delay:.83s;}
+.tbl-row:nth-child(14){animation-delay:.87s;}
+.tbl-row:nth-child(15){animation-delay:.91s;}
+.tbl-row.clickable{cursor:pointer;}
+.tbl-row.clickable:hover{border-color:var(--amber);background:linear-gradient(90deg,#2c2c38 0%,#2c2c38 100%);transform:translateX(6px);box-shadow:-3px 0 0 var(--amber),0 4px 12px rgba(0,0,0,.4);}
+.tbl-row:hover .td{color:var(--text);}
+.th,.td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:12px;transition:color .25s;}
+.th.flex,.td.flex{flex:1;min-width:0;}
+.td.right,.th.right{text-align:right;padding-right:0;}
+
+.bars{display:flex;align-items:flex-end;gap:14px;height:160px;padding:0 18px 0;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+.bar-fill{width:100%;border-radius:7px 7px 4px 4px;background:linear-gradient(180deg,#f0c876 0%,#3e2f12 100%);border:1px solid #8a6c2e;min-height:4px;animation:barGrow 1s cubic-bezier(.2,.9,.3,1.2) both;transition:transform .3s,box-shadow .3s;position:relative;overflow:hidden;}
+.bar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 30%,rgba(255,255,255,.2) 50%,transparent 70%);background-size:200% 100%;animation:barShimmer 3s ease-in-out infinite;pointer-events:none;mix-blend-mode:overlay;}
+.bar-col:hover .bar-fill{transform:scaleY(1.03);box-shadow:0 0 24px rgba(232,184,84,.35);}
+.bar-lbl{font-size:11px;color:var(--muted);font-weight:600;margin-top:8px;transition:color .25s;}
+.bar-col:hover .bar-lbl{color:var(--gold);}
+
+.empty{margin-top:14px;min-height:150px;border-radius:8px;background:linear-gradient(180deg,#22222c 0%,#0e0e14 100%);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;animation:cardEnter .6s cubic-bezier(.2,.9,.3,1.1) both;}
+.empty h3{font-size:15px;font-weight:700;color:var(--text);}
+.empty p{font-size:12px;color:var(--muted);margin:8px 0 16px;}
+
+#bottombar{position:fixed;bottom:0;left:0;right:0;height:var(--bottom-h);background:linear-gradient(180deg,#0f0f16 0%,#06060a 100%);border-top:1px solid #1a1a22;display:flex;align-items:center;padding:0 16px 0 calc(var(--sidebar-w) + 12px);font-size:11px;color:var(--muted);z-index:40;transition:color .3s;}
+#bottombar .right{margin-left:auto;}
+
+.field{display:block;margin-bottom:12px;}
+.field span{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;height:30px;padding:0 10px;border-radius:6px;font-family:inherit;font-size:12px;background:#0a0a10;border:1px solid var(--border);color:var(--text);outline:none;transition:border-color .25s,box-shadow .25s,transform .25s;}
+.field textarea{height:80px;padding:8px 10px;resize:vertical;line-height:1.6;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber);animation:focusPulse .35s;box-shadow:0 0 0 3px rgba(232,184,84,.1);}
+.modal-title{padding:14px 18px 10px;font-size:14px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.06);}
+.modal-body{padding:16px 18px;overflow-y:auto;}
+.modal-actions{padding:12px 18px 14px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,.06);}
+.action-list{display:flex;flex-direction:column;gap:8px;min-width:270px;}
+.action-list .btn{justify-content:flex-start;width:100%;height:34px;padding:0 13px;animation:floatUp .35s cubic-bezier(.2,.9,.3,1.1) both;}
+.action-list .btn:nth-child(1){animation-delay:.03s;}
+.action-list .btn:nth-child(2){animation-delay:.06s;}
+.action-list .btn:nth-child(3){animation-delay:.09s;}
+.action-list .btn:nth-child(4){animation-delay:.12s;}
+.action-list .btn:nth-child(5){animation-delay:.15s;}
+.action-list .btn:nth-child(6){animation-delay:.18s;}
+.action-list .btn:nth-child(7){animation-delay:.21s;}
+.action-list .btn:nth-child(8){animation-delay:.24s;}
+.mono{font-family:Consolas,monospace;font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:#c0c0cc;}
+textarea.mono{width:100%;height:320px;background:#0a0a10;border:1px solid var(--border);border-radius:6px;padding:10px;color:#c0c0cc;outline:none;resize:vertical;font-family:Consolas,monospace;font-size:11.5px;}
+
+.email-composer .modal-body{padding:14px 18px;max-height:70vh;}
+.email-composer textarea.email-body{min-height:180px;padding:12px;line-height:1.65;font-size:12.5px;}
+.composer-meta{display:flex;gap:8px;align-items:center;padding:8px 12px;margin-bottom:14px;background:rgba(232,184,84,.08);border:1px solid rgba(232,184,84,.25);border-radius:7px;font-size:11.5px;color:var(--muted);animation:floatUp .4s both;}
+.composer-meta b{color:var(--gold);}
+.composer-meta .ico{width:22px;height:22px;border-radius:50%;flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:11px;background:#5a4a24;color:var(--gold);border:1px solid var(--amber);}
+.status-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid;transition:transform .25s;}
+.status-pill:hover{transform:scale(1.08);}
+.status-pill.sent{color:var(--green);border-color:var(--green);background:rgba(86,212,136,.08);}
+.status-pill.failed{color:var(--red);border-color:var(--red);background:rgba(240,106,106,.08);}
+.status-pill.new{color:var(--blue);border-color:var(--blue);background:rgba(102,176,238,.08);}
+.status-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor;}
+.sending-dots{display:inline-flex;gap:4px;margin-left:4px;}
+.sending-dots span{width:5px;height:5px;border-radius:50%;background:#b8f5ce;animation:sendingDot 1.4s ease-in-out infinite;}
+.sending-dots span:nth-child(2){animation-delay:.2s;}
+.sending-dots span:nth-child(3){animation-delay:.4s;}
+
+.about-card{position:relative;background:linear-gradient(180deg,#26262f 0%,#0e0e14 100%);border:1px solid var(--border);border-radius:8px;padding:14px 18px 16px;flex:1;min-width:240px;animation:cardEnter .7s cubic-bezier(.2,.9,.3,1.1) both;transition:transform .35s,box-shadow .35s;}
+.about-card:nth-child(1){animation-delay:.1s;}
+.about-card:nth-child(2){animation-delay:.2s;}
+.about-card:nth-child(3){animation-delay:.3s;}
+.about-card:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.5);}
+.about-card .accent{position:absolute;left:2px;top:14px;width:3px;height:36px;border-radius:2px;transition:height .35s cubic-bezier(.2,.9,.3,1.2);}
+.about-card:hover .accent{height:60px;}
+.about-card h4{margin:0 0 10px 14px;font-size:14px;font-weight:700;}
+.about-card pre{margin:0;font-family:inherit;font-size:12px;line-height:1.75;color:#c4c4d0;white-space:pre-wrap;}
+
+.hero{background:linear-gradient(180deg,#5a4620 0%,#181208 100%);border:1px solid #8a6c2e;border-radius:8px;padding:16px 22px;animation:cardEnter .7s cubic-bezier(.2,.9,.3,1.1) both;animation-delay:.15s;position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 30%,rgba(255,220,150,.08) 50%,transparent 70%);background-size:200% 100%;animation:shimmer 4s ease-in-out infinite;pointer-events:none;}
+
+.total-strip{border-radius:7px;height:34px;display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:700;animation:cardEnter .6s cubic-bezier(.2,.9,.3,1.1) both;transition:transform .35s;}
+.total-strip:hover{transform:translateX(4px);}
+.total-strip.green{background:linear-gradient(180deg,#244a32 0%,#0a1810 100%);border:1px solid var(--green);color:#a8ecc4;}
+.total-strip.red{background:linear-gradient(180deg,#4a1e1e 0%,#140a0a 100%);border:1px solid var(--red);color:#ffb8b8;}
+.total-strip.blue{background:linear-gradient(180deg,#22406a 0%,#0c182a 100%);border:1px solid var(--blue);color:#b8dcff;}
+.total-strip.amber{background:linear-gradient(180deg,#4a3c1e 0%,#14100a 100%);border:1px solid var(--amber);color:#f4d99b;}
+
+#onboarding{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 30%,#1a1a22 0%,#06060a 70%);display:flex;align-items:center;justify-content:center;padding:20px;}
+#onboarding.out{animation:obFadeOut .5s ease forwards;}
+.ob-container{width:100%;max-width:480px;animation:cardEnter .7s cubic-bezier(.2,.9,.3,1.1) both;}
+.ob-card{background:linear-gradient(180deg,#2a2a35 0%,#0e0e14 100%);border:1px solid var(--border-2);border-radius:16px;padding:32px 36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.9);}
+.ob-logo{width:80px;height:80px;margin:0 auto 20px;border-radius:18px;background:linear-gradient(160deg,#4a3c1e 0%,#1a1308 100%);border:2px solid #8a6c2e;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:700;color:var(--gold);text-shadow:0 0 24px rgba(244,217,155,.8);animation:logoPop 2.5s ease-in-out infinite;}
+.ob-step{display:none;}
+.ob-step.active{display:block;animation:obStepIn .5s cubic-bezier(.2,.9,.3,1.2) both;}
+.ob-h1{font-size:24px;font-weight:700;text-align:center;letter-spacing:-.4px;margin-bottom:8px;}
+.ob-sub{font-size:13px;color:var(--muted);text-align:center;line-height:1.6;margin-bottom:24px;}
+.ob-progress{display:flex;gap:6px;justify-content:center;margin-bottom:24px;}
+.ob-progress span{width:40px;height:4px;border-radius:2px;background:#2e2e3a;transition:all .4s cubic-bezier(.2,.9,.3,1.2);}
+.ob-progress span.done{background:linear-gradient(90deg,var(--amber),var(--gold));box-shadow:0 0 8px var(--amber);}
+.ob-progress span.current{background:var(--amber);animation:pulseSoft 1.5s ease-in-out infinite;}
+.ob-field{display:block;margin-bottom:16px;animation:floatUp .5s cubic-bezier(.2,.9,.3,1.1) both;}
+.ob-field:nth-child(1){animation-delay:.05s;}
+.ob-field:nth-child(2){animation-delay:.1s;}
+.ob-field:nth-child(3){animation-delay:.15s;}
+.ob-field span{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;}
+.ob-field input{width:100%;height:44px;padding:0 14px;border-radius:8px;font-family:inherit;font-size:14px;background:#0a0a10;border:1px solid var(--border);color:var(--text);outline:none;transition:border-color .3s,box-shadow .3s,transform .3s;}
+.ob-field input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,184,84,.12);transform:scale(1.01);}
+.ob-actions{display:flex;gap:10px;margin-top:24px;}
+.ob-actions .btn{flex:1;height:46px;font-size:14px;font-weight:700;border-radius:8px;}
+.ob-success{text-align:center;padding:20px 0;}
+.ob-success .check{width:80px;height:80px;margin:0 auto 20px;border-radius:50%;background:#0e1e14;border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:40px;color:#b8f5ce;box-shadow:0 0 60px rgba(86,212,136,.5);animation:successPulse .6s cubic-bezier(.2,.9,.3,1.5) both;}
+.ob-loader{width:40px;height:40px;margin:20px auto;border:3px solid rgba(232,184,84,.2);border-top-color:var(--amber);border-radius:50%;animation:spin360 1s linear infinite;}
+
+.reply-item{position:relative;padding:14px 16px;margin-top:8px;border-radius:8px;background:linear-gradient(180deg,#22222c 0%,#0f0f16 100%);border:1px solid var(--border);animation:rowEnter .5s cubic-bezier(.2,.9,.3,1.2) both;transition:transform .3s,border-color .3s,box-shadow .3s;}
+.reply-item:hover{border-color:var(--border-2);transform:translateX(4px);box-shadow:0 6px 16px rgba(0,0,0,.4);}
+.reply-item.new{border-left:3px solid var(--blue);}
+.reply-item .from{font-size:12.5px;font-weight:700;color:var(--text);}
+.reply-item .subj{font-size:11.5px;color:var(--gold);margin-top:3px;}
+.reply-item .snippet{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5;}
+.reply-item .date{font-size:10px;color:var(--muted-2);margin-top:6px;}
+
+@media(max-width:1100px){.searchbox{width:240px;}}
+@media(max-width:900px){.searchbox{display:none;}:root{--sidebar-w:64px;}.nav-lbl,.sub-lbl,.nav-badge{display:none;}.sub-item{padding-left:0;}.sub-dot{margin-left:26px;}#bottombar{padding-left:76px;}}
+</style>
+</head>
+<body>
+
+<div id="splash"><div class="sp-logo">V</div></div>
+<header id="topbar"></header>
+<nav id="sidebar"></nav>
+<main id="content"></main>
+<footer id="bottombar"></footer>
+<div id="toasts"></div>
+
+<div id="onboarding">
+  <div class="ob-container">
+    <div class="ob-card">
+      <div class="ob-step active" data-step="1">
+        <div class="ob-logo">V</div>
+        <div class="ob-h1">Welcome to Velora Studio</div>
+        <div class="ob-sub">Your complete business dashboard.<br>Let's get started in 20 seconds.</div>
+        <div class="ob-actions">
+          <button class="btn green ob-next" data-next="2">Get Started →</button>
+        </div>
+      </div>
+      <div class="ob-step" data-step="2">
+        <div class="ob-progress"><span class="done"></span><span class="current"></span></div>
+        <div class="ob-h1">Tell us about you</div>
+        <div class="ob-sub">This info appears on your invoices.</div>
+        <label class="ob-field"><span>Your Name</span>
+          <input id="ob-name" type="text" placeholder="e.g. Ali Khan">
+        </label>
+        <label class="ob-field"><span>Company Name</span>
+          <input id="ob-company" type="text" placeholder="e.g. Khan Enterprises">
+        </label>
+        <label class="ob-field"><span>Business Email</span>
+          <input id="ob-email" type="email" placeholder="you@company.com">
+        </label>
+        <div class="ob-actions">
+          <button class="btn ghost ob-prev" data-prev="1">← Back</button>
+          <button class="btn green ob-finish">Start Using App →</button>
+        </div>
+      </div>
+      <div class="ob-step" data-step="3">
+        <div class="ob-success">
+          <div class="check">✓</div>
+          <div class="ob-h1">You're all set!</div>
+          <div class="ob-sub">Preparing your dashboard...</div>
+          <div class="ob-loader"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const STORE_KEY="velora_studio_v8";
+const state={page:"Dashboard",subPage:"",search:""};
+
+/* ============================================================
+   BEAUTIFUL SOUND SYSTEM
+   Uses Web Audio API with harmonics, reverb & smooth envelopes
+   ============================================================ */
+let audioCtx = null;
+let masterGain = null;
+let reverbNode = null;
+let convolver = null;
+let soundEnabled = true; // Always on — no toggle
+
+function initAudio(){
+  if(audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Master gain for overall volume control
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.35;
+    masterGain.connect(audioCtx.destination);
+    
+    // Simple reverb using feedback delay network
+    reverbNode = audioCtx.createGain();
+    reverbNode.gain.value = 0.12;
+    const delay1 = audioCtx.createDelay();
+    delay1.delayTime.value = 0.08;
+    const delay2 = audioCtx.createDelay();
+    delay2.delayTime.value = 0.13;
+    const feedback = audioCtx.createGain();
+    feedback.gain.value = 0.35;
+    
+    reverbNode.connect(delay1);
+    delay1.connect(delay2);
+    delay2.connect(feedback);
+    feedback.connect(delay1);
+    delay2.connect(masterGain);
+    
+  } catch(e){ audioCtx = null; }
+}
+document.addEventListener("click", function once(){ initAudio(); document.removeEventListener("click", once); }, {once:true});
+document.addEventListener("keydown", function once(){ initAudio(); document.removeEventListener("keydown", once); }, {once:true});
+document.addEventListener("touchstart", function once(){ initAudio(); document.removeEventListener("touchstart", once); }, {once:true});
+
+// Core note player with smooth ADSR envelope
+function playNote(freq, startOffset, dur, vol, type, reverbAmount){
+  if(!audioCtx) return;
+  try {
+    const t = audioCtx.currentTime + startOffset;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    
+    // Smooth ADSR envelope
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.012);          // Attack
+    gain.gain.exponentialRampToValueAtTime(vol * 0.6, t + 0.08); // Decay
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);     // Release
+    
+    osc.connect(gain);
+    gain.connect(masterGain);
+    
+    // Send some to reverb
+    if(reverbAmount && reverbNode){
+      const sendGain = audioCtx.createGain();
+      sendGain.gain.value = reverbAmount;
+      gain.connect(sendGain);
+      sendGain.connect(reverbNode);
+    }
+    
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  } catch(e){}
+}
+
+// Rich layered sound with two frequencies (fundamental + harmonic)
+function playRich(freq, startOffset, dur, vol){
+  playNote(freq, startOffset, dur, vol, 'sine', 0.3);
+  playNote(freq * 2, startOffset, dur * 0.7, vol * 0.25, 'sine', 0.15);
+  playNote(freq * 3, startOffset, dur * 0.5, vol * 0.08, 'sine', 0.1);
+}
+
+/* ---------- Sound presets ---------- */
+
+// Soft, subtle click — like a wooden tick
+function playClick(){
+  if(!audioCtx) return;
+  playNote(1200, 0, 0.03, 0.06, 'sine', 0.2);
+  playNote(2400, 0, 0.02, 0.03, 'sine', 0);
+}
+
+// Beautiful ascending major chord — C-E-G-C (success)
+function playSuccess(){
+  if(!audioCtx) return;
+  playRich(523.25, 0.00, 0.55, 0.10);   // C5
+  playRich(659.25, 0.07, 0.55, 0.10);   // E5
+  playRich(783.99, 0.14, 0.60, 0.11);   // G5
+  playRich(1046.5, 0.22, 0.70, 0.09);   // C6
+}
+
+// Gentle falling tone — soft buzz (error)
+function playError(){
+  if(!audioCtx) return;
+  playNote(392.00, 0.00, 0.25, 0.08, 'sine', 0.3);   // G4
+  playNote(311.13, 0.12, 0.35, 0.08, 'sine', 0.3);   // Eb4
+}
+
+// Whoosh-up rising tone (send email)
+function playSend(){
+  if(!audioCtx) return;
+  playNote(600, 0.00, 0.10, 0.07, 'sine', 0.25);
+  playNote(800, 0.05, 0.12, 0.08, 'sine', 0.25);
+  playNote(1050, 0.10, 0.18, 0.09, 'sine', 0.3);
+  playNote(1400, 0.16, 0.25, 0.07, 'sine', 0.35);
+}
+
+// Soft bell chime (notification)
+function playNotify(){
+  if(!audioCtx) return;
+  playRich(880, 0.00, 0.55, 0.09);    // A5
+  playRich(1174.66, 0.10, 0.65, 0.08); // D6
+}
+
+// Warm modal open (soft, pleasant)
+function playOpen(){
+  if(!audioCtx) return;
+  playNote(440, 0.00, 0.12, 0.04, 'sine', 0.3);
+  playNote(587.33, 0.05, 0.15, 0.05, 'sine', 0.3);
+}
+
+// Soft down-tone (delete)
+function playDelete(){
+  if(!audioCtx) return;
+  playNote(440, 0.00, 0.15, 0.07, 'sine', 0.3);   // A4
+  playNote(329.63, 0.08, 0.22, 0.07, 'sine', 0.3); // E4
+}
+
+// Subtle page nav sound
+function playNav(){
+  if(!audioCtx) return;
+  playNote(660, 0.00, 0.08, 0.03, 'sine', 0.2);
+}
+
+/* ==================== EMAIL BACKEND ==================== */
+const DEFAULT_BACKEND_URL = "https://script.google.com/macros/s/AKfycbzSYMyql6rtUV6dI5JYFhjAve-SSNSlEA2toSM0HoOO2vwgnwwl3iyodpAm9dUt9Blo6w/exec";
+let EMAIL_BACKEND_URL = (function(){
+  try{ const saved = localStorage.getItem("velora_backend_url"); if(saved && saved.trim()) return saved.trim(); }catch(e){}
+  return DEFAULT_BACKEND_URL;
+})();
+
+/* ==================== ONBOARDING ==================== */
+const ONBOARD_KEY = "velora_onboarded_v1";
+function isOnboarded(){ try{ return localStorage.getItem(ONBOARD_KEY) === "yes"; }catch(e){ return false; } }
+function markOnboarded(){ try{ localStorage.setItem(ONBOARD_KEY, "yes"); }catch(e){} }
+function showOnboardingStep(n){
+  const ov = document.getElementById("onboarding"); if(!ov) return;
+  ov.querySelectorAll(".ob-step").forEach(s=>{
+    s.classList.remove("active");
+    if(String(s.dataset.step) === String(n)) s.classList.add("active");
+  });
+  playOpen();
+}
+function validateEmail(email){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||"").trim()); }
+function initOnboarding(){
+  const ov = document.getElementById("onboarding"); if(!ov) return;
+  if(isOnboarded()){ ov.style.display = "none"; return; }
+  ov.style.display = "flex";
+  ov.querySelectorAll("[data-next]").forEach(btn=>{ btn.onclick = ()=> showOnboardingStep(btn.dataset.next); });
+  ov.querySelectorAll("[data-prev]").forEach(btn=>{ btn.onclick = ()=> showOnboardingStep(btn.dataset.prev); });
+  const finishBtn = ov.querySelector(".ob-finish");
+  if(finishBtn){
+    finishBtn.onclick = async ()=>{
+      const name = (document.getElementById("ob-name")||{}).value || "";
+      const company = (document.getElementById("ob-company")||{}).value || "";
+      const email = (document.getElementById("ob-email")||{}).value || "";
+      if(!name.trim()){ playError(); alertBox("Please enter your name.","Missing Info"); return; }
+      if(!company.trim()){ playError(); alertBox("Please enter your company name.","Missing Info"); return; }
+      if(!validateEmail(email)){ playError(); alertBox("Please enter a valid email.","Invalid Email"); return; }
+      DB.config.companyName = company.trim();
+      DB.config.companyEmail = email.trim();
+      DB.config.senderName = name.trim();
+      DB.config.senderEmail = email.trim();
+      saveDB();
+      markOnboarded();
+      playSuccess();
+      showOnboardingStep("3");
+      setTimeout(()=>{
+        ov.classList.add("out");
+        setTimeout(()=>{ ov.style.display = "none"; render(); toast("Welcome to Velora Studio!","Your dashboard is ready","green"); }, 500);
+      }, 1500);
+    };
+  }
+  ov.addEventListener("keydown", e=>{
+    if(e.key === "Enter" && e.target.tagName !== "TEXTAREA"){
+      const activeStep = ov.querySelector(".ob-step.active"); if(!activeStep) return;
+      const nextBtn = activeStep.querySelector(".ob-next");
+      const finishBtn = activeStep.querySelector(".ob-finish");
+      if(nextBtn){ e.preventDefault(); nextBtn.click(); }
+      else if(finishBtn){ e.preventDefault(); finishBtn.click(); }
+    }
+  });
+}
+
+/* ==================== UTILITIES ==================== */
+function showLoadingBar(){
+  let bar=document.getElementById("loadingbar"); if(bar) bar.remove();
+  bar=document.createElement("div"); bar.id="loadingbar"; document.body.appendChild(bar);
+  clearTimeout(bar._t);
+  bar._t=setTimeout(()=>{ bar.style.transition="opacity .3s"; bar.style.opacity="0"; setTimeout(()=>bar.remove(),350); },700);
+}
+function ripple(e){
+  const el=e.currentTarget; if(!el || el.dataset.noRipple==="1") return;
+  const rect=el.getBoundingClientRect(); const size=Math.max(rect.width,rect.height)*1.6;
+  const x=(e.clientX||rect.left+rect.width/2)-rect.left-size/2;
+  const y=(e.clientY||rect.top+rect.height/2)-rect.top-size/2;
+  const rip=document.createElement("span"); rip.className="ripple";
+  rip.style.width=rip.style.height=size+"px"; rip.style.left=x+"px"; rip.style.top=y+"px";
+  el.appendChild(rip); setTimeout(()=>rip.remove(),700);
+}
+function toast(title,msg,type){
+  type=type||"green"; const icons={green:"✓",red:"✕",blue:"i",amber:"!"};
+  if(type==="green") playSuccess();
+  else if(type==="red") playError();
+  else if(type==="blue") playNotify();
+  const box=document.getElementById("toasts");
+  const el=document.createElement("div"); el.className="toast "+type;
+  el.innerHTML=`<div class="toast-ico">${icons[type]||"✓"}</div><div class="toast-body"><div class="toast-title">${esc(title||"")}</div>${msg?`<div class="toast-msg">${esc(msg)}</div>`:""}</div><button class="toast-close">✕</button><div class="toast-progress"></div>`;
+  box.appendChild(el);
+  const close=()=>{ el.classList.add("out"); setTimeout(()=>el.remove(),360); };
+  el.querySelector(".toast-close").onclick=close; setTimeout(close,3600);
+}
+function countUpValue(el,target,prefix){
+  if(!el) return; prefix=prefix||"";
+  const start=performance.now(); const dur=1100; const targetNum=+target||0;
+  function step(now){
+    const t=Math.min(1,(now-start)/dur); const eased=1-Math.pow(1-t,3);
+    el.textContent=prefix+(targetNum*eased).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+    if(t<1) requestAnimationFrame(step);
+    else el.textContent=prefix+targetNum.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  requestAnimationFrame(step);
+}
+
+function defaultAccounts(){
+  return [
+    ["1000","Cash","Asset","",0],["1010","Bank Account","Asset","",0],
+    ["1100","Accounts Receivable","Asset","",0],["1200","Inventory","Asset","",0],
+    ["1500","Fixed Assets","Asset","",0],["2000","Accounts Payable","Liability","",0],
+    ["2100","Tax Payable","Liability","",0],["2200","Salaries Payable","Liability","",0],
+    ["3000","Owner Equity","Equity","",0],["3100","Retained Earnings","Equity","",0],
+    ["4000","Sales Revenue","Revenue","",0],["4100","Service Revenue","Revenue","",0],
+    ["5000","Cost of Goods Sold","Expense","",0],["6000","Salaries Expense","Expense","",0],
+    ["6100","Rent Expense","Expense","",0],["6200","Utilities Expense","Expense","",0],
+    ["6300","Marketing Expense","Expense","",0],["6400","Office Supplies","Expense","",0],
+    ["6900","Miscellaneous Expense","Expense","",0]
+  ].map(a=>({code:a[0],name:a[1],type:a[2],parent:a[3],opening:a[4],balance:a[4]}));
+}
+function defaultDB(){
+  return {
+    config:{companyName:"Your Company",companyEmail:"you@company.com",taxRatePct:10,currency:"PKR",
+      senderName:"",senderEmail:"",
+      defaultSubject:"Invoice {invoice_id} from {company_name}",
+      defaultBody:"Dear {client},\n\nPlease find attached invoice {invoice_id} for {amount}.\n\nDue Date: {due_date}\nStatus: {status}\n\nThank you for your business.\n\nBest regards,\n{company_name}"},
+    invoices:[],clients:[],products:[],vendors:[],expenses:[],
+    estimates:[],creditNotes:[],accounts:defaultAccounts(),
+    journal:[],employees:[],payroll:[],bankTxn:[],auditLog:[],payments:[],
+    emailLog:[], replies:[]
+  };
+}
+let DB=(function(){
+  try{const r=localStorage.getItem(STORE_KEY);if(r){const p=JSON.parse(r);const b=defaultDB();const m=Object.assign(b,p);m.config=Object.assign(b.config,p.config||{});if(!Array.isArray(m.accounts)||!m.accounts.length)m.accounts=defaultAccounts();if(!Array.isArray(m.emailLog))m.emailLog=[];if(!Array.isArray(m.replies))m.replies=[];return m;}}catch(e){}
+  return defaultDB();
+})();
+let saveT;function saveDB(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}},60);}
+
+const $=s=>document.querySelector(s);
+function esc(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function safeNum(v){const n=parseFloat(String(v).replace(/,/g,""));if(!isFinite(n))return 0;return Math.max(-1e15,Math.min(1e15,n));}
+function money(v){return (DB.config.currency||"PKR")+" "+safeNum(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function num2(v){return safeNum(v).toLocaleString("en-US",{maximumFractionDigits:2});}
+function todayISO(d){d=d||new Date();return d.toISOString().slice(0,10);}
+function addDaysISO(n){const d=new Date();d.setDate(d.getDate()+n);return todayISO(d);}
+function nowStamp(){const d=new Date();return d.toISOString().slice(0,19).replace("T"," ");}
+function nextId(prefix,rows,key){key=key||"id";let max=0;(rows||[]).forEach(r=>{const id=String(r[key]||"");if(id.indexOf(prefix+"-")===0){const m=id.slice(prefix.length+1).match(/^\d+/);if(m){const n=parseInt(m[0],10);if(n>max&&n<999999999)max=n;}}});return prefix+"-"+String(max+1).padStart(3,"0");}
+function taxRate(){return safeNum(DB.config.taxRatePct)/100;}
+function currency(){return DB.config.currency||"PKR";}
+function greeting(){const h=new Date().getHours();if(h<12)return"Good morning";if(h<17)return"Good afternoon";if(h<21)return"Good evening";return"Good night";}
+function matchSearch(){if(!state.search)return true;const q=state.search.toLowerCase();return Array.prototype.slice.call(arguments).some(v=>String(v??"").toLowerCase().indexOf(q)!==-1);}
+function statusColor(st){return st==="Paid"?"var(--green)":st==="Pending"?"var(--blue)":st==="Overdue"?"var(--red)":st==="Partial"?"var(--amber)":"var(--muted)";}
+function sumAll(){return DB.invoices.reduce((t,i)=>t+safeNum(i.total),0);}
+function sumByStatus(st){return DB.invoices.filter(i=>i.status===st).reduce((t,i)=>t+safeNum(i.total),0);}
+function sumExpenses(){return DB.expenses.reduce((t,e)=>t+safeNum(e.total),0);}
+function sumVendorBalance(){return DB.vendors.reduce((t,v)=>t+safeNum(v.balance),0);}
+function getInvoicePaid(id){return DB.payments.filter(p=>p.invoiceId===id).reduce((t,p)=>t+safeNum(p.amount),0);}
+function updateInvoiceStatusFromPayments(id){const inv=DB.invoices.find(i=>i.id===id);if(!inv)return;const t=safeNum(inv.total),p=getInvoicePaid(id);if(p>=t-0.01)inv.status="Paid";else if(p>0)inv.status="Partial";else if(inv.status==="Paid"||inv.status==="Partial")inv.status="Pending";}
+function updateAccountBalance(code,delta){const a=DB.accounts.find(x=>x.code===code);if(a)a.balance=safeNum(a.balance)+delta;}
+function calcIncomeTax(m){const a=m*12;let t=0;if(a<=600000)t=0;else if(a<=1200000)t=(a-600000)*.05;else if(a<=2200000)t=30000+(a-1200000)*.15;else if(a<=3200000)t=180000+(a-2200000)*.25;else if(a<=4100000)t=430000+(a-3200000)*.30;else t=700000+(a-4100000)*.35;return t/12;}
+
+/* ==================== EMAIL SYSTEM ==================== */
+function fillPlaceholders(template,ctx){return String(template||"").replace(/\{(\w+)\}/g,(m,k)=>ctx[k]!==undefined?ctx[k]:m);}
+function buildInvoiceContext(inv){
+  const client = DB.clients.find(c=>c.name.toLowerCase()===String(inv.client).toLowerCase()) || {};
+  return {invoice_id: inv.id, client: inv.client, client_email: client.email || "", date: inv.date, due_date: inv.dueDate, status: inv.status, amount: money(inv.total), subtotal: money(inv.subtotal), tax: money(inv.tax), currency: currency(), company_name: DB.config.companyName, company_email: DB.config.companyEmail, sender_name: DB.config.senderName || DB.config.companyName, sender_email: DB.config.senderEmail || DB.config.companyEmail, notes: inv.notes || ""};
+}
+function generateEmailId(){const stamp=new Date().toISOString().slice(0,19).replace(/[-:T]/g,"");return "EML-"+stamp.slice(0,14);}
+function saveEmailLog(entry){
+  DB.emailLog.unshift(Object.assign({id: generateEmailId(), ts: nowStamp(), status: "sent", method: "GAS"}, entry));
+  if(DB.emailLog.length > 500) DB.emailLog.length = 500;
+  saveDB();
+}
+async function sendEmailViaBackend(data){
+  if(!EMAIL_BACKEND_URL){ return { success:false, error:"Backend URL not configured." }; }
+  try{
+    await fetch(EMAIL_BACKEND_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({to: data.to, subject: data.subject, body: data.body, fromName: data.fromName || DB.config.senderName || DB.config.companyName, fromEmail: data.fromEmail || DB.config.senderEmail || DB.config.companyEmail, invoiceId: data.invoiceId || "", client: data.client || ""})
+    });
+    return { success:true };
+  }catch(err){ return { success:false, error: String(err && err.message || err) }; }
+}
+
+async function fetchReplies(){
+  if(!EMAIL_BACKEND_URL){ toast("Backend not configured","Add URL in Settings","red"); return; }
+  toast("Checking for replies...","Please wait","blue");
+  try{
+    const url = EMAIL_BACKEND_URL + "?action=getReplies";
+    const res = await fetch(url, {method: "GET"});
+    const data = await res.json();
+    if(data && Array.isArray(data.replies)){
+      const existing = (DB.replies || []).map(r=>r.date + "|" + r.from);
+      let newCount = 0;
+      data.replies.forEach(r=>{
+        const key = r.date + "|" + r.from;
+        if(existing.indexOf(key) === -1){
+          DB.replies.unshift(r);
+          newCount++;
+        }
+      });
+      DB.replies.sort((a,b)=> new Date(b.date) - new Date(a.date));
+      if(DB.replies.length > 200) DB.replies.length = 200;
+      saveDB();
+      render();
+      if(newCount > 0){
+        toast(`${newCount} new reply received!`, "Check Replies page", "green");
+        playNotify();
+      } else {
+        toast("No new replies", "All caught up", "blue");
+      }
+    } else {
+      toast("No replies found", "Try again later", "amber");
+    }
+  }catch(err){
+    toast("Fetch failed", "Check your backend URL", "red");
+  }
+}
+
+function emailComposer(invId){
+  const inv = DB.invoices.find(i=>i.id===invId); if(!inv){ toast("Invoice not found",invId,"red"); return; }
+  const ctx = buildInvoiceContext(inv);
+  const client = DB.clients.find(c=>c.name.toLowerCase()===String(inv.client).toLowerCase()) || {};
+  const defaultTo = client.email || "";
+  const defaultSubject = fillPlaceholders(DB.config.defaultSubject||"Invoice {invoice_id}",ctx);
+  const defaultBody = fillPlaceholders(DB.config.defaultBody||"",ctx);
+  const body = `
+    <div class="modal-title">📧 Send Invoice Email</div>
+    <div class="modal-body">
+      <div class="composer-meta">
+        <div class="ico">${esc(inv.id.slice(-2))}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;color:var(--muted-2);">SENDING INVOICE</div>
+          <div style="font-size:12.5px;color:var(--text);font-weight:600;margin-top:2px;">${esc(inv.id)} · ${esc(inv.client)} · <b style="color:var(--gold);">${esc(money(inv.total))}</b></div>
+        </div>
+      </div>
+      <label class="field"><span>To (recipient email)</span><input id="ec_to" type="email" value="${esc(defaultTo)}" placeholder="client@example.com"></label>
+      <label class="field"><span>Subject</span><input id="ec_subject" type="text" value="${esc(defaultSubject)}"></label>
+      <label class="field"><span>Message body</span><textarea id="ec_body" class="email-body">${esc(defaultBody)}</textarea></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" data-ec-cancel>Cancel</button>
+      <button class="btn green" data-ec-send>📤 Send Email</button>
+    </div>`;
+  const ov = openModal(body,{width:640});
+  ov.querySelector(".modal").classList.add("email-composer");
+  ov.querySelector("[data-ec-cancel]").onclick = ()=> closeModal(ov);
+  ov.querySelector("[data-ec-send]").onclick = async ()=>{
+    const to = ov.querySelector("#ec_to").value.trim();
+    const subject = ov.querySelector("#ec_subject").value.trim();
+    const bodyText = ov.querySelector("#ec_body").value;
+    if(!to){ toast("Recipient required","","red"); return; }
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)){ toast("Invalid email","","red"); return; }
+    if(!subject){ toast("Subject required","","red"); return; }
+    if(!bodyText.trim()){ toast("Body required","","red"); return; }
+    const sendBtn = ov.querySelector("[data-ec-send]"); const origHtml = sendBtn.innerHTML;
+    sendBtn.disabled = true; sendBtn.style.opacity = ".7";
+    sendBtn.innerHTML = `Sending<span class="sending-dots"><span></span><span></span><span></span></span>`;
+    playSend();
+    const result = await sendEmailViaBackend({to, subject, body: bodyText, invoiceId: inv.id, client: inv.client});
+    if(result.success){
+      saveEmailLog({invoiceId: inv.id, to, subject, body: bodyText, client: inv.client, status:"sent"});
+      closeModal(ov); toast("Email sent! ✉",`To ${to}`,"green"); render();
+    }else{
+      saveEmailLog({invoiceId: inv.id, to, subject, body: bodyText, client: inv.client, status:"failed", error: result.error});
+      toast("Send failed", result.error, "red");
+      sendBtn.disabled = false; sendBtn.style.opacity = ""; sendBtn.innerHTML = origHtml;
+    }
+  };
+}
+
+async function testEmailBackend(){
+  const r = await formModal("Send Test Email",[{key:"to",label:"Send test email to",value: DB.config.senderEmail || DB.config.companyEmail, required:true, placeholder:"your-email@gmail.com"}],"Send Test");
+  if(!r) return;
+  toast("Sending test...","Please wait","blue");
+  playSend();
+  const result = await sendEmailViaBackend({to: r.to, subject: "✅ Velora Studio — Test Email", body: "This is a test email from Velora Studio.\n\nIf you received this, your email backend is working perfectly!\n\nSent at: " + nowStamp(), invoiceId: "", client: "Test"});
+  if(result.success){ saveEmailLog({invoiceId:"TEST",to:r.to,subject:"Test Email",body:"Velora test",client:"Test",status:"sent"}); toast("Test sent!","Check your inbox","green"); render(); }
+  else{ toast("Test failed",result.error,"red"); }
+}
+
+/* ==================== MODALS ==================== */
+let modalStack=[];
+function openModal(html,opts){ opts=opts||{}; const ov=document.createElement("div"); ov.className="overlay"; ov.innerHTML=`<div class="modal" style="width:${opts.width||440}px">${html}</div>`; document.body.appendChild(ov); modalStack.push(ov); requestAnimationFrame(()=>ov.classList.add("show")); playOpen(); return ov; }
+function closeModal(ov){ if(!ov)return; ov.classList.add("closing"); ov.classList.remove("show"); setTimeout(()=>{ov.remove();modalStack=modalStack.filter(m=>m!==ov);},220); }
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modalStack.length)closeModal(modalStack[modalStack.length-1]);});
+function alertBox(msg,title){return new Promise(res=>{const ov=openModal(`<div class="modal-title">${esc(title||"Velora")}</div><div class="modal-body"><div class="mono">${esc(msg)}</div></div><div class="modal-actions"><button class="btn green" data-ok>OK</button></div>`,{width:Math.min(520,window.innerWidth-40)});ov.querySelector("[data-ok]").onclick=()=>{closeModal(ov);res(true);};});}
+function confirmBox(msg,title){return new Promise(res=>{const ov=openModal(`<div class="modal-title">${esc(title||"Confirm")}</div><div class="modal-body"><div class="mono">${esc(msg)}</div></div><div class="modal-actions"><button class="btn ghost" data-no>Cancel</button><button class="btn red" data-yes>Yes</button></div>`,{width:Math.min(480,window.innerWidth-40)});ov.querySelector("[data-yes]").onclick=()=>{closeModal(ov);res(true);};ov.querySelector("[data-no]").onclick=()=>{closeModal(ov);res(false);};});}
+function formModal(title,fields,okLabel){return new Promise(res=>{const body=fields.map(f=>{const id="f_"+f.key;if(f.type==="select"){return `<label class="field"><span>${esc(f.label)}</span><select id="${id}" data-k="${esc(f.key)}">${(f.options||[]).map(o=>`<option value="${esc(o)}" ${String(o)===String(f.value)?"selected":""}>${esc(o)}</option>`).join("")}</select></label>`;}if(f.type==="textarea"){return `<label class="field"><span>${esc(f.label)}</span><textarea id="${id}" data-k="${esc(f.key)}">${esc(f.value||"")}</textarea></label>`;}return `<label class="field"><span>${esc(f.label)}</span><input id="${id}" data-k="${esc(f.key)}" type="${f.type||"text"}" value="${esc(f.value??"")}" placeholder="${esc(f.placeholder||"")}"></label>`;}).join("");const ov=openModal(`<div class="modal-title">${esc(title)}</div><div class="modal-body">${body}</div><div class="modal-actions"><button class="btn ghost" data-cancel>Cancel</button><button class="btn green" data-ok>${esc(okLabel||"Save")}</button></div>`,{width:Math.min(520,window.innerWidth-40)});const first=ov.querySelector("input,select,textarea");if(first)setTimeout(()=>first.focus(),40);function collect(){const o={};ov.querySelectorAll("[data-k]").forEach(el=>{o[el.dataset.k]=el.value;});return o;}function submit(){const v=collect();for(const f of fields.filter(x=>x.required))if(!String(v[f.key]||"").trim()){alertBox(`"${f.label}" required.`,"Missing");return;}closeModal(ov);res(v);}ov.querySelector("[data-ok]").onclick=submit;ov.querySelector("[data-cancel]").onclick=()=>{closeModal(ov);res(null);};ov.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.tagName!=="TEXTAREA"){e.preventDefault();submit();}});});}
+function actionSheet(title,actions){return new Promise(res=>{const ov=openModal(`<div class="modal-title">${esc(title)}</div><div class="modal-body"><div class="action-list">${actions.map((a,i)=>`<button class="btn ${a.cls||"ghost"}" data-i="${i}">${esc(a.label)}</button>`).join("")}</div></div><div class="modal-actions"><button class="btn ghost" data-cancel>Cancel</button></div>`,{width:Math.min(400,window.innerWidth-40)});ov.querySelectorAll("[data-i]").forEach(b=>{b.onclick=()=>{closeModal(ov);res(actions[+b.dataset.i].value);};});ov.querySelector("[data-cancel]").onclick=()=>{closeModal(ov);res(null);};});}
+
+const NAV=[
+  {icon:"D",label:"Dashboard",page:"Dashboard"},
+  {icon:"S",label:"Sales",page:"Sales",sub:"Invoices",children:[
+    {label:"Invoices",page:"Sales",sub:"Invoices"},
+    {label:"Estimates",page:"Sales",sub:"Estimates"},
+    {label:"Credit Notes",page:"Sales",sub:"CreditNotes"}]},
+  {icon:"C",label:"Clients",page:"Clients"},
+  {icon:"V",label:"Vendors",page:"Vendors"},
+  {icon:"P",label:"Products",page:"Products"},
+  {icon:"I",label:"Inventory",page:"Inventory"},
+  {icon:"E",label:"Expenses",page:"Expenses"},
+  {icon:"Y",label:"Payroll",page:"Payroll"},
+  {icon:"A",label:"Accounting",page:"Accounting",sub:"ChartOfAccounts",children:[
+    {label:"Chart of Accounts",page:"Accounting",sub:"ChartOfAccounts"},
+    {label:"Journal Entries",page:"Accounting",sub:"Journal"},
+    {label:"Trial Balance",page:"Accounting",sub:"TrialBalance"},
+    {label:"Profit & Loss",page:"Accounting",sub:"ProfitAndLoss"},
+    {label:"Balance Sheet",page:"Accounting",sub:"BalanceSheet"}]},
+  {icon:"B",label:"Bank",page:"Bank"},
+  {icon:"Y",label:"Payments",page:"Payments"},
+  {icon:"M",label:"Emails",page:"EmailLog"},
+  {icon:"R",label:"Replies",page:"Replies"},
+  {icon:"T",label:"Reports",page:"Reports",sub:"Overview",children:[
+    {label:"Overview",page:"Reports",sub:"Overview"},
+    {label:"Aged Receivables",page:"Reports",sub:"AgedReceivables"}]},
+  {icon:"G",label:"Settings",page:"Settings"},
+  {icon:"H",label:"About",page:"About"}
+];
+
+function renderTopbar(){
+  const sInner=state.search
+    ?`<div class="qmark">x</div><div class="stxt filter">Filter: ${esc(state.search)}</div><button class="s-clear" data-action="clear-search">x Clear</button>`
+    :`<div class="qmark">?</div><div class="stxt">Search...</div>`;
+  $("#topbar").innerHTML=`
+    <div class="logo-zone"><div class="logo-glow"></div><div class="logo">V</div></div>
+    <div class="searchbox" data-action="search">${sInner}</div>
+    <div class="top-right">
+      <button class="btn-refresh" data-action="refresh">R</button>
+      <button class="btn-create-top" data-action="new-invoice">+&nbsp; Create Invoice</button>
+    </div>`;
+}
+function renderSidebar(){
+  let h="";
+  NAV.forEach(item=>{
+    const active=state.page===item.page;
+    let badge = "";
+    if(item.page==="EmailLog" && DB.emailLog.length) badge = `<span class="nav-badge">${DB.emailLog.length}</span>`;
+    if(item.page==="Replies" && DB.replies && DB.replies.length) badge = `<span class="nav-badge reply">${DB.replies.length}</span>`;
+    h+=`<div class="nav-item ${active?"active":""}" data-action="nav" data-page="${esc(item.page)}" data-sub="${esc(item.sub||"")}">
+      <div class="nav-ico">${esc(item.icon)}</div><div class="nav-lbl">${esc(item.label)}</div>${badge}
+    </div>`;
+    if(active&&item.children){
+      item.children.forEach(ch=>{
+        const sa=state.subPage===ch.sub||(state.subPage===""&&ch.sub===item.sub);
+        h+=`<div class="sub-item ${sa?"active":""}" data-action="nav" data-page="${esc(ch.page)}" data-sub="${esc(ch.sub)}"><div class="sub-dot"></div><div class="sub-lbl">${esc(ch.label)}</div></div>`;
+      });
+    }
+  });
+  $("#sidebar").innerHTML=h;
+}
+function renderBottom(){
+  const path=state.page+(state.subPage?" &gt; "+state.subPage:"");
+  $("#bottombar").innerHTML=`<div>Velora Studio v7.0&nbsp; | &nbsp;${esc(DB.config.companyName)}&nbsp; | &nbsp;Currency: ${esc(currency())}&nbsp; | &nbsp;Tax: ${num2(DB.config.taxRatePct)}%&nbsp; | &nbsp;Email: Active</div><div class="right">Page: ${path}</div>`;
+}
+
+function tblHead(cols){return `<div class="tbl-head">${cols.map(c=>{const st=(c.w?`width:${c.w}px;`:"")+(c.flex?"flex:1;min-width:0;":"")+(c.align?`text-align:${c.align};`:"");return `<div class="th ${c.flex?"flex":""} ${c.align==="right"?"right":""}" style="${st}">${esc(c.label)}</div>`;}).join("")}</div>`;}
+function tblRow(cols,cells,attrs){attrs=attrs||{};const clickable=!!attrs.action;return `<div class="tbl-row ${clickable?"clickable":""}" ${attrs.action?`data-action="${esc(attrs.action)}"`:""} ${attrs.id?`data-id="${esc(attrs.id)}"`:""}>${cols.map((c,i)=>{const v=cells[i];const st=(c.w?`width:${c.w}px;`:"")+(c.flex?"flex:1;min-width:0;":"")+(c.align?`text-align:${c.align};`:"");const cls=`td ${c.flex?"flex":""} ${c.align==="right"?"right":""}`;const col=(v&&v.color)?v.color:(c.color||"");const txt=(v&&typeof v==="object")?v.text:v;const bold=(v&&v.bold)?"font-weight:700;":"";return `<div class="${cls}" style="${st}${col?`color:${col};`:""}${bold}">${txt===undefined?"":txt}</div>`;}).join("")}</div>`;}
+function emptyState(title,subtitle,btnLabel,btnAction){return `<div class="empty"><h3>${esc(title)}</h3><p>${esc(subtitle)}</p>${btnLabel?`<button class="btn green" data-action="${esc(btnAction)}">${esc(btnLabel)}</button>`:""}</div>`;}
+function totalStrip(color,label,value){return `<div class="total-strip ${color} mt14"><div style="flex:1;">${esc(label)}</div><div>${esc(value)}</div></div>`;}
+
+function pageDashboard(){
+  const rev=sumAll(),exp=sumExpenses(),prof=rev-exp;
+  const recv=sumByStatus("Pending")+sumByStatus("Overdue")+sumByStatus("Partial");
+  const pay=sumVendorBalance();
+  const cards=[
+    {t:"REVENUE",v:money(rev),raw:rev,s:"Total income",c:"var(--green)"},
+    {t:"EXPENSES",v:money(exp),raw:exp,s:"Total spent",c:"var(--red)"},
+    {t:"PROFIT",v:money(prof),raw:prof,s:"Net profit",c:"var(--blue)"},
+    {t:"RECEIVABLE",v:money(recv),raw:recv,s:"Unpaid invoices",c:"var(--amber)"},
+    {t:"PAYABLE",v:money(pay),raw:pay,s:"Vendor dues",c:"var(--purple)"}
+  ];
+  return `<div class="page-greet">${esc(greeting())}</div>
+    <div class="page-sub">Business overview &nbsp;-&nbsp; ${esc(new Date().toLocaleDateString("en-GB",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}))}</div>
+    <div class="kpi-grid g5">${cards.map(c=>`<div class="kpi"><div class="bar" style="background:${c.c};"></div><div class="t">${c.t}</div><div class="v" data-count="${c.raw}" data-prefix="${esc(currency())} ">${esc(c.v)}</div><div class="s">${c.s}</div></div>`).join("")}</div>
+    <div class="row mt18" style="align-items:stretch;">${revenueChart()}${cashPosition(rev,exp,prof)}</div>
+    <div class="mt18">${DB.invoices.length ? invoiceTable(5,"Recent Invoices",true) : emptyState("No invoices yet","Start by creating your first invoice","+ Create Invoice","new-invoice")}</div>`;
+}
+function revenueChart(){
+  const labels=[],vals=[];const now=new Date();
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);labels.push(d.toLocaleString("en-US",{month:"short"}));let t=0;DB.invoices.forEach(inv=>{const dt=new Date(inv.date);if(!isNaN(dt)&&dt.getMonth()===d.getMonth()&&dt.getFullYear()===d.getFullYear())t+=safeNum(inv.total);});vals.push(t);}
+  const has=vals.some(v=>v>0);
+  const disp=has?vals:[0.35,0.55,0.42,0.72,0.60,0.88].map(v=>v*10000);
+  const max=Math.max.apply(null,disp.concat([1]));
+  return `<div class="card grow" style="flex:0 0 62%;min-height:230px;padding:14px 0 0;"><div style="padding:0 18px;"><div class="card-hd">Revenue Overview</div><div class="card-sub">Last 6 months</div></div><div class="bars" style="margin-top:14px;">${disp.map((v,i)=>`<div class="bar-col"><div class="bar-fill" style="height:${Math.max(4,(v/max)*100)}%;"></div><div class="bar-lbl">${labels[i]}</div></div>`).join("")}</div></div>`;
+}
+function cashPosition(rev,exp,prof){
+  return `<div class="card grow" style="min-height:230px;padding:16px 18px;"><div class="card-hd">Cash Position</div><div class="card-sub">Current balances</div>
+    <div style="margin-top:20px;"><div style="font-size:10px;font-weight:700;color:var(--muted);">INCOME</div><div style="font-size:19px;font-weight:700;color:var(--green);margin-top:3px;">${money(rev)}</div></div>
+    <div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--muted);">EXPENSES</div><div style="font-size:19px;font-weight:700;color:var(--red);margin-top:3px;">${money(exp)}</div></div>
+    <div style="margin-top:16px;"><div style="font-size:10px;font-weight:700;color:var(--muted);">NET</div><div style="font-size:19px;font-weight:700;color:var(--blue);margin-top:3px;">${money(prof)}</div></div>
+  </div>`;
+}
+function pageSales(){
+  if(!state.subPage)state.subPage="Invoices";
+  let btns=state.subPage==="Invoices"?`<button class="btn green" data-action="new-invoice">+&nbsp; New Invoice</button>`:state.subPage==="Estimates"?`<button class="btn green" data-action="new-estimate">+&nbsp; New Estimate</button>`:`<button class="btn green" data-action="new-creditnote">+&nbsp; New Credit Note</button>`;
+  let h=`<div class="row" style="align-items:center;justify-content:space-between;"><div class="page-h1">Sales - ${esc(state.subPage)}</div><div>${btns}</div></div><div class="mt18">`;
+  if(state.subPage==="Invoices")h+=invoiceTable(999,"",true);
+  else if(state.subPage==="Estimates")h+=estimatesTable();
+  else h+=creditNotesTable();
+  return h+"</div>";
+}
+function invoiceTable(maxRows,title,clickable){
+  const cols=[{label:"INVOICE",w:120},{label:"CLIENT",flex:true},{label:"DATE",w:110},{label:"STATUS",w:100},{label:"TOTAL",w:140,align:"right"}];
+  let h="";if(title)h+=`<div class="page-h2" style="margin-bottom:10px;">${esc(title)}</div>`;
+  if(!DB.invoices.length&&!state.search)return h+emptyState("No invoices yet","Click below to create your first invoice","+ Create First Invoice","new-invoice");
+  h+=tblHead(cols);
+  const rows=DB.invoices.filter(i=>matchSearch(i.id,i.client,i.status)).slice(0,maxRows);
+  rows.forEach(inv=>{h+=tblRow(cols,[{text:esc(inv.id),bold:true},{text:esc(inv.client)},{text:esc(inv.date),color:"var(--muted)"},{text:esc(inv.status),color:statusColor(inv.status),bold:true},{text:esc(money(inv.total)),bold:true}],clickable?{action:"invoice-click",id:inv.id}:{});});
+  return h;
+}
+function estimatesTable(){
+  const cols=[{label:"ID",w:120},{label:"CLIENT",flex:true},{label:"DATE",w:110},{label:"STATUS",w:100},{label:"TOTAL",w:140,align:"right"}];
+  if(!DB.estimates.length)return emptyState("No estimates yet","Create estimates / quotes","+ New Estimate","new-estimate");
+  let h=tblHead(cols);
+  DB.estimates.filter(e=>matchSearch(e.id,e.client)).forEach(e=>{h+=tblRow(cols,[{text:esc(e.id),bold:true},{text:esc(e.client)},{text:esc(e.date),color:"var(--muted)"},{text:esc(e.status),color:"var(--amber)",bold:true},{text:esc(money(e.total)),bold:true}],{action:"estimate-click",id:e.id});});
+  return h;
+}
+function creditNotesTable(){
+  const cols=[{label:"ID",w:120},{label:"CLIENT",flex:true},{label:"DATE",w:110},{label:"INVOICE",w:120},{label:"TOTAL",w:140,align:"right"}];
+  if(!DB.creditNotes.length)return emptyState("No credit notes yet","Issue credit notes","+ New Credit Note","new-creditnote");
+  let h=tblHead(cols);
+  DB.creditNotes.filter(c=>matchSearch(c.id,c.client)).forEach(c=>{h+=tblRow(cols,[{text:esc(c.id),bold:true},{text:esc(c.client)},{text:esc(c.date),color:"var(--muted)"},{text:esc(c.invoiceRef||"-"),color:"var(--muted)"},{text:esc(money(c.total)),color:"var(--red)",bold:true}],{action:"creditnote-click",id:c.id});});
+  return h;
+}
+function pageClients(){
+  const cols=[{label:"ID",w:100},{label:"NAME",flex:true},{label:"CITY",w:150},{label:"PHONE",w:160},{label:"EMAIL",w:220}];
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Clients</div><button class="btn green" data-action="new-client">+&nbsp; New Client</button></div><div class="mt18">`;
+  if(!DB.clients.length)return h+emptyState("No clients yet","Add your first client","+ Add First Client","new-client")+"</div>";
+  h+=tblHead(cols);
+  DB.clients.filter(c=>matchSearch(c.id,c.name,c.city,c.email,c.phone)).forEach(c=>{h+=tblRow(cols,[{text:esc(c.id),bold:true},{text:esc(c.name),bold:true},{text:esc(c.city||"-"),color:"var(--muted)"},{text:esc(c.phone||"-"),color:"var(--muted)"},{text:esc(c.email||"-"),color:"var(--muted)"}],{action:"client-click",id:c.id});});
+  return h+"</div>";
+}
+function pageVendors(){
+  const cols=[{label:"ID",w:100},{label:"NAME",flex:true},{label:"CITY",w:140},{label:"PHONE",w:150},{label:"EMAIL",w:200},{label:"BALANCE",w:140,align:"right"}];
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Vendors</div><button class="btn green" data-action="new-vendor">+&nbsp; New Vendor</button></div><div class="mt18">`;
+  if(!DB.vendors.length)return h+emptyState("No vendors yet","Add vendors / suppliers","+ Add First Vendor","new-vendor")+"</div>";
+  h+=tblHead(cols);
+  DB.vendors.filter(v=>matchSearch(v.id,v.name,v.city,v.email)).forEach(v=>{h+=tblRow(cols,[{text:esc(v.id),bold:true},{text:esc(v.name),bold:true},{text:esc(v.city||"-"),color:"var(--muted)"},{text:esc(v.phone||"-"),color:"var(--muted)"},{text:esc(v.email||"-"),color:"var(--muted)"},{text:esc(money(v.balance)),color:"var(--purple)",bold:true}],{action:"vendor-click",id:v.id});});
+  return h+"</div>";
+}
+function pageProducts(){
+  const cols=[{label:"ID",w:100},{label:"NAME",flex:true},{label:"RATE",w:140,align:"right"},{label:"COST",w:140,align:"right"},{label:"STOCK",w:140,align:"right"}];
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Products</div><button class="btn green" data-action="new-product">+&nbsp; New Product</button></div><div class="mt18">`;
+  if(!DB.products.length)return h+emptyState("No products yet","Add products / services","+ Add First Product","new-product")+"</div>";
+  h+=tblHead(cols);
+  DB.products.filter(p=>matchSearch(p.id,p.name,p.category)).forEach(p=>{h+=tblRow(cols,[{text:esc(p.id),bold:true},{text:esc(p.name),bold:true},{text:esc(money(p.rate)),color:"var(--green)",bold:true},{text:esc(money(p.cost)),color:"var(--amber)",bold:true},{text:esc(num2(p.stock)),color:"var(--blue)",bold:true}],{action:"product-click",id:p.id});});
+  return h+"</div>";
+}
+function pageInventory(){
+  let h=`<div class="page-h1">Inventory</div>`;
+  if(!DB.products.length)return h+emptyState("No products in inventory","Add products with stock","+ Add Product","new-product");
+  let totalValue=0,lowStock=0;
+  DB.products.forEach(p=>{totalValue+=safeNum(p.stock)*safeNum(p.cost);if(safeNum(p.stock)<5)lowStock++;});
+  h+=`<div class="kpi-grid g3 mt18">
+    <div class="kpi"><div class="bar" style="background:var(--green);"></div><div class="t">STOCK VALUE</div><div class="v">${esc(money(totalValue))}</div></div>
+    <div class="kpi"><div class="bar" style="background:var(--blue);"></div><div class="t">PRODUCT COUNT</div><div class="v">${DB.products.length}</div></div>
+    <div class="kpi"><div class="bar" style="background:var(--red);"></div><div class="t">LOW STOCK</div><div class="v" style="color:var(--red);">${lowStock}</div></div>
+  </div>`;
+  const cols=[{label:"ID",w:100},{label:"PRODUCT",flex:true},{label:"STOCK",w:140,align:"right"},{label:"COST",w:140,align:"right"},{label:"VALUE",w:150,align:"right"}];
+  h+=`<div class="mt18">`+tblHead(cols);
+  DB.products.filter(p=>matchSearch(p.id,p.name)).forEach(p=>{
+    const st=safeNum(p.stock),cst=safeNum(p.cost);
+    const col=st<5?"var(--red)":(st<20?"var(--amber)":"var(--green)");
+    h+=tblRow(cols,[{text:esc(p.id),bold:true},{text:esc(p.name),bold:true},{text:esc(num2(st)),color:col,bold:true},{text:esc(money(cst)),color:"var(--amber)"},{text:esc(money(st*cst)),bold:true}],{action:"product-click",id:p.id});
+  });
+  return h+"</div>";
+}
+function pageExpenses(){
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Expenses</div><button class="btn green" data-action="new-expense">+&nbsp; New Expense</button></div>`;
+  if(!DB.expenses.length)return h+emptyState("No expenses recorded","Track business expenses","+ Add First Expense","new-expense");
+  const cols=[{label:"ID",w:100},{label:"DATE",w:110},{label:"CATEGORY",w:170},{label:"VENDOR",flex:true},{label:"TOTAL",w:140,align:"right"}];
+  h+=`<div class="mt18">`+tblHead(cols);
+  let total=0;
+  DB.expenses.filter(e=>matchSearch(e.id,e.category,e.vendor)).forEach(e=>{total+=safeNum(e.total);h+=tblRow(cols,[{text:esc(e.id),bold:true},{text:esc(e.date),color:"var(--muted)"},{text:esc(e.category),color:"var(--amber)",bold:true},{text:esc(e.vendor||"-"),color:"var(--muted)"},{text:esc(money(e.total)),color:"var(--red)",bold:true}],{action:"expense-click",id:e.id});});
+  h+=`</div>`+totalStrip("red","TOTAL EXPENSES",money(total));
+  return h;
+}
+function pagePayroll(){
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Payroll</div><div style="display:flex;gap:8px;"><button class="btn blue" data-action="run-payroll">Run Payroll</button><button class="btn green" data-action="new-employee">+&nbsp; New Employee</button></div></div>`;
+  if(!DB.employees.length)return h+emptyState("No employees yet","Add employees to run payroll","+ Add First Employee","new-employee");
+  const cols=[{label:"ID",w:100},{label:"NAME",flex:true},{label:"DESIGNATION",w:170},{label:"BASIC",w:130,align:"right"},{label:"ALLOWANCES",w:120,align:"right"},{label:"NET SALARY",w:130,align:"right"}];
+  h+=`<div class="mt18">`+tblHead(cols);
+  let totalSalary=0;
+  DB.employees.filter(e=>matchSearch(e.id,e.name,e.designation)).forEach(e=>{const basic=safeNum(e.basic),allow=safeNum(e.allowances),ded=safeNum(e.deductions);totalSalary+=basic+allow-ded;h+=tblRow(cols,[{text:esc(e.id),bold:true},{text:esc(e.name),bold:true},{text:esc(e.designation||"-"),color:"var(--muted)"},{text:esc(money(basic)),color:"var(--muted)"},{text:esc(money(allow)),color:"var(--green)"},{text:esc(money(basic+allow-ded)),color:"var(--amber)",bold:true}],{action:"employee-click",id:e.id});});
+  h+=`</div>`+totalStrip("blue","TOTAL SALARY",money(totalSalary));
+  return h;
+}
+function pageAccounting(){
+  if(!state.subPage)state.subPage="ChartOfAccounts";
+  if(state.subPage==="ChartOfAccounts")return pageCOA();
+  if(state.subPage==="Journal")return pageJournal();
+  if(state.subPage==="TrialBalance")return pageTrialBalance();
+  if(state.subPage==="ProfitAndLoss")return pagePL();
+  if(state.subPage==="BalanceSheet")return pageBS();
+  return "";
+}
+const TYPE_COLOR={Asset:"var(--green)",Liability:"var(--red)",Equity:"var(--purple)",Revenue:"var(--blue)",Expense:"var(--amber)"};
+function pageCOA(){
+  const cols=[{label:"CODE",w:110},{label:"ACCOUNT NAME",flex:true},{label:"TYPE",w:160},{label:"BALANCE",w:180,align:"right"}];
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Chart of Accounts</div><button class="btn green" data-action="new-account">+&nbsp; New Account</button></div><div class="mt18">`+tblHead(cols);
+  DB.accounts.filter(a=>matchSearch(a.code,a.name,a.type)).forEach(a=>{h+=tblRow(cols,[{text:esc(a.code),bold:true},{text:esc(a.name),bold:true},{text:esc(a.type),color:TYPE_COLOR[a.type]||"var(--muted)",bold:true},{text:esc(money(a.balance)),bold:true}],{action:"account-click",id:a.code});});
+  return h+"</div>";
+}
+function pageJournal(){
+  const cols=[{label:"ID",w:100},{label:"DATE",w:110},{label:"ACCOUNT",w:150},{label:"DEBIT",w:130,align:"right"},{label:"CREDIT",w:130,align:"right"},{label:"DESCRIPTION",flex:true}];
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Journal Entries</div><button class="btn green" data-action="new-journal">+&nbsp; New Entry</button></div>`;
+  if(!DB.journal.length)return h+emptyState("No journal entries yet","Create manual journal entries","+ New Entry","new-journal");
+  h+=`<div class="mt18">`+tblHead(cols);
+  DB.journal.filter(j=>matchSearch(j.id,j.account,j.description)).forEach(j=>{h+=tblRow(cols,[{text:esc(j.id),bold:true},{text:esc(j.date),color:"var(--muted)"},{text:esc(j.account),color:"var(--amber)",bold:true},{text:safeNum(j.debit)?esc(money(j.debit)):"-",color:"var(--green)"},{text:safeNum(j.credit)?esc(money(j.credit)):"-",color:"var(--red)"},{text:esc(j.description||""),color:"var(--muted)"}],{action:"journal-click",id:j.id});});
+  return h+"</div>";
+}
+function pageTrialBalance(){
+  const cols=[{label:"CODE",w:110},{label:"ACCOUNT",flex:true},{label:"DEBIT",w:200,align:"right"},{label:"CREDIT",w:200,align:"right"}];
+  let h=`<div class="page-h1">Trial Balance</div><div class="page-sub">As of ${esc(new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}))}</div><div class="mt18">`+tblHead(cols);
+  let totDr=0,totCr=0;
+  DB.accounts.forEach(a=>{const bal=safeNum(a.balance);let dr=0,cr=0;if(a.type==="Asset"||a.type==="Expense"){if(bal>=0)dr=bal;else cr=-bal;}else{if(bal>=0)cr=bal;else dr=-bal;}totDr+=dr;totCr+=cr;h+=tblRow(cols,[{text:esc(a.code),bold:true},{text:esc(a.name),bold:true},{text:dr?esc(money(dr)):"-",color:"var(--green)"},{text:cr?esc(money(cr)):"-",color:"var(--red)"}]);});
+  h+=`</div><div class="total-strip amber mt14"><div style="width:200px;">TOTALS</div><div style="width:200px;text-align:right;color:var(--green);">${esc(money(totDr))}</div><div style="width:200px;text-align:right;color:var(--red);">${esc(money(totCr))}</div></div>`;
+  return h;
+}
+function pagePL(){
+  const revs=DB.accounts.filter(a=>a.type==="Revenue");const exps=DB.accounts.filter(a=>a.type==="Expense");
+  const tr=revs.reduce((t,a)=>t+safeNum(a.balance),0);const te=exps.reduce((t,a)=>t+safeNum(a.balance),0);const net=tr-te;
+  const nc=net>=0?"var(--green)":"var(--red)";
+  const line=(a,c)=>`<div style="display:flex;align-items:center;height:24px;padding:0 28px;"><div style="flex:1;font-size:12px;">${esc(a.code)} &nbsp; ${esc(a.name)}</div><div style="width:180px;text-align:right;font-size:12px;font-weight:700;color:${c};">${esc(money(a.balance))}</div></div>`;
+  return `<div class="page-h1">Profit &amp; Loss Statement</div><div class="page-sub">For the current period</div><div class="mt18">
+    <div class="total-strip green" style="height:34px;"><div style="font-size:12px;font-weight:700;">REVENUE</div></div>
+    ${revs.map(a=>line(a,"var(--green)")).join("")}
+    <div style="display:flex;height:26px;align-items:center;padding:0 28px;"><div style="flex:1;font-size:13px;font-weight:700;">Total Revenue</div><div style="width:180px;text-align:right;font-size:13px;font-weight:700;color:var(--green);">${esc(money(tr))}</div></div>
+    <div class="total-strip red mt14" style="height:34px;"><div style="font-size:12px;font-weight:700;">EXPENSES</div></div>
+    ${exps.map(a=>line(a,"var(--red)")).join("")}
+    <div style="display:flex;height:26px;align-items:center;padding:0 28px;"><div style="flex:1;font-size:13px;font-weight:700;">Total Expenses</div><div style="width:180px;text-align:right;font-size:13px;font-weight:700;color:var(--red);">${esc(money(te))}</div></div>
+    <div class="card mt18" style="height:56px;display:flex;align-items:center;padding:0 20px;border-color:${nc};"><div style="flex:1;font-size:16px;font-weight:700;color:${nc};">${net>=0?"NET PROFIT":"NET LOSS"}</div><div style="font-size:18px;font-weight:700;color:${nc};">${esc(money(Math.abs(net)))}</div></div>
+  </div>`;
+}
+function pageBS(){
+  const A=DB.accounts.filter(a=>a.type==="Asset"),L=DB.accounts.filter(a=>a.type==="Liability"),E=DB.accounts.filter(a=>a.type==="Equity");
+  const tA=A.reduce((t,a)=>t+safeNum(a.balance),0),tL=L.reduce((t,a)=>t+safeNum(a.balance),0),tE=E.reduce((t,a)=>t+safeNum(a.balance),0);
+  const section=(title,color,list,tot)=>`
+    <div class="total-strip" style="height:34px;border:1px solid ${color};background:rgba(255,255,255,.02);"><div style="font-size:12px;font-weight:700;color:${color};">${title}</div></div>
+    ${list.map(a=>`<div style="display:flex;align-items:center;height:24px;padding:0 28px;"><div style="flex:1;font-size:12px;">${esc(a.code)} &nbsp; ${esc(a.name)}</div><div style="width:180px;text-align:right;font-size:12px;font-weight:700;color:${color};">${esc(money(a.balance))}</div></div>`).join("")}
+    <div style="display:flex;height:26px;align-items:center;padding:0 28px;"><div style="flex:1;font-size:13px;font-weight:700;">Total ${title.charAt(0)+title.slice(1).toLowerCase()}</div><div style="width:180px;text-align:right;font-size:13px;font-weight:700;color:${color};">${esc(money(tot))}</div></div>`;
+  return `<div class="page-h1">Balance Sheet</div><div class="page-sub">As of ${esc(new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}))}</div><div class="mt18">
+    ${section("ASSETS","var(--green)",A,tA)}
+    <div class="mt14">${section("LIABILITIES","var(--red)",L,tL)}</div>
+    <div class="mt14">${section("EQUITY","var(--purple)",E,tE)}</div>
+    <div class="total-strip amber mt18" style="height:44px;"><div style="flex:1;font-size:13px;font-weight:700;">TOTAL LIABILITIES + EQUITY</div><div style="font-size:15px;font-weight:700;">${esc(money(tL+tE))}</div></div>
+  </div>`;
+}
+function pageBank(){
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Bank Reconciliation</div><button class="btn green" data-action="import-bank">Import CSV</button></div>`;
+  if(!DB.bankTxn.length)return h+emptyState("No bank transactions","Import CSV to reconcile","Import CSV","import-bank");
+  const cols=[{label:"ID",w:100},{label:"DATE",w:110},{label:"DESCRIPTION",flex:true},{label:"DEBIT",w:120,align:"right"},{label:"CREDIT",w:120,align:"right"},{label:"STATUS",w:120}];
+  h+=`<div class="mt18">`+tblHead(cols);
+  DB.bankTxn.filter(b=>matchSearch(b.id,b.description,b.date)).forEach(b=>{const st=b.status==="Matched"?"var(--green)":"var(--amber)";h+=tblRow(cols,[{text:esc(b.id),bold:true},{text:esc(b.date),color:"var(--muted)"},{text:esc(b.description),bold:true},{text:safeNum(b.debit)?esc(money(b.debit)):"-",color:"var(--red)"},{text:safeNum(b.credit)?esc(money(b.credit)):"-",color:"var(--green)"},{text:esc(b.status),color:st,bold:true}],{action:"bank-click",id:b.id});});
+  return h+"</div>";
+}
+function pagePayments(){
+  let h=`<div class="row" style="justify-content:space-between;align-items:center;"><div class="page-h1">Payments Received</div><button class="btn green" data-action="record-payment">+&nbsp; Record Payment</button></div>`;
+  if(!DB.payments.length)return h+emptyState("No payments recorded","Record payments received","+ Record First Payment","record-payment");
+  const cols=[{label:"ID",w:100},{label:"DATE",w:110},{label:"INVOICE",w:130},{label:"CLIENT",flex:true},{label:"METHOD",w:120},{label:"AMOUNT",w:150,align:"right"}];
+  h+=`<div class="mt18">`+tblHead(cols);
+  let total=0;
+  DB.payments.filter(p=>matchSearch(p.id,p.invoiceId,p.client)).forEach(p=>{total+=safeNum(p.amount);h+=tblRow(cols,[{text:esc(p.id),bold:true},{text:esc(p.date),color:"var(--muted)"},{text:esc(p.invoiceId),color:"var(--amber)",bold:true},{text:esc(p.client),bold:true},{text:esc(p.method||"-"),color:"var(--muted)"},{text:esc(money(p.amount)),color:"var(--green)",bold:true}],{action:"payment-click",id:p.id});});
+  h+=`</div>`+totalStrip("green","TOTAL RECEIVED",money(total));
+  return h;
+}
+function pageEmailLog(){
+  const logs = DB.emailLog.filter(e=>matchSearch(e.to,e.subject,e.invoiceId,e.client));
+  let h = `<div class="row" style="justify-content:space-between;align-items:center;"><div><div class="page-h1">Email Log</div><div class="page-sub">${DB.emailLog.length} emails · ${DB.emailLog.filter(e=>e.status==="sent").length} sent</div></div><button class="btn green" data-action="email-test">✉ Send Test</button></div>`;
+  if(!DB.emailLog.length) return h + emptyState("No emails yet","Open any invoice and choose 'Email Invoice'","View Invoices","nav-sales");
+  const cols=[{label:"ID",w:140},{label:"DATE",w:150},{label:"TO",flex:true},{label:"SUBJECT",w:240},{label:"STATUS",w:110}];
+  h += `<div class="mt18">` + tblHead(cols);
+  logs.forEach(e=>{h += tblRow(cols,[{text:esc(e.id),bold:true},{text:esc(e.ts),color:"var(--muted)"},{text:esc(e.to||"-"),bold:true},{text:esc(e.subject||"-")},{text:`<span class="status-pill ${e.status||"sent"}">${esc((e.status||"sent").toUpperCase())}</span>`}],{action:"email-log-click",id:e.id});});
+  return h + "</div>";
+}
+function openEmailDetail(e){
+  const body = `<div class="modal-title">📧 ${esc(e.subject)}</div><div class="modal-body"><div style="font-size:11px;color:var(--muted);margin-bottom:4px;">TO</div><div style="font-size:13px;color:var(--text);margin-bottom:12px;">${esc(e.to||"-")}</div><div style="font-size:11px;color:var(--muted);margin-bottom:8px;">BODY</div><div style="background:#0a0a10;border:1px solid var(--border);border-radius:7px;padding:14px;font-size:12.5px;line-height:1.7;color:#d0d0dc;max-height:300px;overflow-y:auto;white-space:pre-wrap;">${esc(e.body||"")}</div></div><div class="modal-actions"><button class="btn red" data-el-delete>Delete</button><button class="btn ghost" data-el-close>Close</button></div>`;
+  const ov = openModal(body,{width:640});
+  ov.querySelector("[data-el-close]").onclick = ()=> closeModal(ov);
+  ov.querySelector("[data-el-delete]").onclick = async ()=>{
+    if(!(await confirmBox(`Delete email?`,"Delete"))) return;
+    DB.emailLog = DB.emailLog.filter(x=>x.id!==e.id); saveDB(); closeModal(ov); render(); playDelete(); toast("Email deleted","","red");
+  };
+}
+function pageReplies(){
+  let h = `<div class="row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div class="page-h1">📬 Email Replies</div>
+      <div class="page-sub">${(DB.replies||[]).length} replies received from clients</div>
+    </div>
+    <button class="btn green" data-action="fetch-replies">🔄 Check for Replies</button>
+  </div>`;
+  if(!DB.replies || !DB.replies.length){
+    return h + emptyState("No replies yet","Send invoices via email — client replies will appear here","Check Now","fetch-replies");
+  }
+  h += `<div class="mt18">`;
+  DB.replies.forEach((r,i)=>{
+    const isNew = i < 3 ? "new" : "";
+    h += `<div class="reply-item ${isNew}">
+      <div class="from">${esc(r.from)}</div>
+      <div class="subj">${esc(r.subject||"(no subject)")}</div>
+      <div class="snippet">${esc(r.snippet || r.body || "").slice(0,180)}</div>
+      <div class="date">${esc(r.date ? new Date(r.date).toLocaleString("en-GB",{dateStyle:"medium",timeStyle:"short"}) : "")}</div>
+    </div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+function pageReports(){
+  if(!state.subPage)state.subPage="Overview";
+  if(state.subPage==="AgedReceivables")return pageAged();
+  const invCount=DB.invoices.length,cliCount=DB.clients.length,venCount=DB.vendors.length,expCount=DB.expenses.length;
+  const avg=invCount?sumAll()/invCount:0;
+  const stats=[
+    ["Invoices",String(invCount),"var(--amber)"],["Clients",String(cliCount),"var(--amber)"],["Vendors",String(venCount),"var(--amber)"],
+    ["Expenses",String(expCount),"var(--amber)"],["Revenue",money(sumAll()),"var(--green)"],["Expenses Total",money(sumExpenses()),"var(--red)"],
+    ["Net Profit",money(sumAll()-sumExpenses()),"var(--blue)"],["Avg Invoice",money(avg),"var(--blue)"],
+    ["Receivable",money(sumByStatus("Pending")+sumByStatus("Overdue")+sumByStatus("Partial")),"var(--amber)"],
+    ["Payable",money(sumVendorBalance()),"var(--purple)"],
+    ["Paid",money(sumByStatus("Paid")),"var(--green)"],["Pending",money(sumByStatus("Pending")),"var(--blue)"],["Overdue",money(sumByStatus("Overdue")),"var(--red)"],
+    ["Emails",String(DB.emailLog.length),"var(--amber)"],["Replies",String((DB.replies||[]).length),"var(--green)"]
+  ];
+  return `<div class="page-h1">Reports &amp; Analytics</div><div class="kpi-grid g3 mt18">${stats.map(s=>`<div class="kpi"><div class="bar" style="background:${s[2]};"></div><div class="t">${esc(s[0].toUpperCase())}</div><div class="v">${esc(s[1])}</div></div>`).join("")}</div>`;
+}
+function pageAged(){
+  let h=`<div class="page-h1">Aged Receivables</div><div class="page-sub">As of ${esc(new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}))}</div>`;
+  const cols=[{label:"INVOICE",w:120},{label:"CLIENT",flex:true},{label:"AGE",w:150},{label:"BALANCE",w:130,align:"right"},{label:"CURRENT",w:120,align:"right"},{label:"31-60",w:110,align:"right"},{label:"60+",w:110,align:"right"}];
+  const rows=[];let b1=0,b2=0,b3=0,total=0;const now=new Date();
+  DB.invoices.forEach(inv=>{if(inv.status==="Paid")return;const bal=safeNum(inv.total)-getInvoicePaid(inv.id);if(bal<=0.01)return;const due=new Date(inv.dueDate);const days=isNaN(due)?0:Math.floor((now-due)/86400000);let a1=0,a2=0,a3=0;if(days<=30)a1=bal;else if(days<=60)a2=bal;else a3=bal;b1+=a1;b2+=a2;b3+=a3;total+=bal;rows.push({inv,days,bal,a1,a2,a3});});
+  if(!rows.length)return h+emptyState("No outstanding invoices","All invoices paid!","View Invoices","nav-sales");
+  const cf=d=>d>60?"var(--red)":(d>30?"var(--amber)":"var(--green)");
+  h+=`<div class="mt18">`+tblHead(cols);
+  rows.forEach(r=>{h+=tblRow(cols,[{text:esc(r.inv.id),bold:true},{text:esc(r.inv.client),bold:true},{text:r.days+"d",color:cf(r.days),bold:true},{text:esc(money(r.bal)),bold:true},{text:r.a1?esc(money(r.a1)):"-",color:"var(--green)"},{text:r.a2?esc(money(r.a2)):"-",color:"var(--amber)"},{text:r.a3?esc(money(r.a3)):"-",color:"var(--red)"}]);});
+  h+=`</div><div class="total-strip amber mt14"><div style="width:220px;">TOTALS</div><div style="width:130px;text-align:right;">${esc(money(total))}</div><div style="width:120px;text-align:right;color:var(--green);">${esc(money(b1))}</div><div style="width:110px;text-align:right;color:var(--amber);">${esc(money(b2))}</div><div style="width:110px;text-align:right;color:var(--red);">${esc(money(b3))}</div></div>`;
+  return h;
+}
+function pageSettings(){
+  const emOk = EMAIL_BACKEND_URL && EMAIL_BACKEND_URL.indexOf("PASTE")===-1;
+  return `<div class="page-h1">Settings</div>
+    <div class="card mt18" style="padding:14px 20px;"><div style="font-size:15px;font-weight:700;">${esc(DB.config.companyName)}</div><div style="font-size:12px;color:var(--muted);margin-top:5px;">${esc(DB.config.companyEmail)} &nbsp;|&nbsp; Tax: ${num2(DB.config.taxRatePct)}% &nbsp;|&nbsp; Currency: ${esc(currency())}</div></div>
+    <div class="card mt14" style="padding:14px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:14px;font-weight:700;">📧 Email Backend</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;">${emOk?"Configured. Emails will send automatically.":"Not configured."}</div></div>${emOk?`<span class="status-pill sent">ACTIVE</span>`:`<span class="status-pill failed">NOT SET</span>`}</div>
+      <div class="row mt14"><button class="btn green" data-action="email-test">✉ Send Test Email</button><button class="btn blue" data-action="goto-email-log">📬 Email Log (${DB.emailLog.length})</button><button class="btn amber" data-action="fetch-replies">🔄 Check Replies</button></div>
+    </div>
+    <div class="row mt18"><button class="btn blue" data-action="edit-company">Edit Company Info</button><button class="btn blue" data-action="view-data">View Raw Data</button><button class="btn amber" data-action="load-sample">Load Sample Data</button></div>
+    <div class="row mt14"><button class="btn red" data-action="reset-all">Reset All Data</button><button class="btn amber" data-action="edit-tax">Edit Tax Rate (${num2(DB.config.taxRatePct)}%)</button><button class="btn green" data-action="export-invoices">Export Invoices CSV</button></div>
+    <div class="row mt14"><button class="btn green" data-action="export-all">Export Full Backup</button><button class="btn blue" data-action="edit-currency">Edit Currency (${esc(currency())})</button><button class="btn green" data-action="backup">Backup File</button><button class="btn amber" data-action="restore">Restore Backup</button></div>
+    <div class="row mt14"><button class="btn amber" data-action="reset-onboarding">⚙ Run Setup Again</button></div>`;
+}
+function pageAbout(){
+  const card=(c,t,b)=>`<div class="about-card"><div class="accent" style="background:${c};"></div><h4 style="color:${c};">${t}</h4><pre>${esc(b)}</pre></div>`;
+  return `<div class="page-greet">About Velora Studio</div><div class="page-sub">Enterprise Edition v7.0</div>
+    <div class="hero mt18"><div style="font-size:14px;font-weight:700;color:var(--gold);">Complete business management in your browser</div><div style="font-size:12px;color:var(--text);margin-top:8px;opacity:.9;">No internet needed. Your data stays on your computer.</div></div>
+    <div class="row mt18" style="align-items:stretch;">
+      ${card("var(--green)","Features",`- Invoices & Estimates
+- Clients & Vendors
+- Products & Inventory
+- Expenses & Payments
+- Payroll Management
+- Chart of Accounts
+- Journal & Reports
+- Bank Reconciliation
+- Email Sending
+- Email Replies Inbox
+- Beautiful Sound Effects
+- Backup & Restore`)}
+      ${card("var(--blue)","Who it is for",`Freelancers
+Small agencies
+Independent professionals
+Service providers
+Small shops`)}
+      ${card("var(--red)","Not Included",`GST/VAT filing
+Multi-user cloud
+Mobile app
+Bank auto-sync`)}
+    </div>`;
+}
+
+const PAGES={Dashboard:pageDashboard,Sales:pageSales,Clients:pageClients,Vendors:pageVendors,Products:pageProducts,Inventory:pageInventory,Expenses:pageExpenses,Payroll:pagePayroll,Accounting:pageAccounting,Bank:pageBank,Payments:pagePayments,EmailLog:pageEmailLog,Replies:pageReplies,Reports:pageReports,Settings:pageSettings,About:pageAbout};
+
+function render(){
+  showLoadingBar();
+  renderTopbar();
+  renderSidebar();
+  renderBottom();
+  const c=$("#content");
+  const fn=PAGES[state.page]||pageDashboard;
+  c.innerHTML=fn();
+  c.classList.remove("page-enter"); void c.offsetWidth; c.classList.add("page-enter");
+  c.scrollTop=0;
+  requestAnimationFrame(()=>{c.querySelectorAll(".kpi .v[data-count]").forEach(el=>{const val=parseFloat(el.dataset.count)||0;const prefix=el.dataset.prefix||"";countUpValue(el,val,prefix);});});
+}
+function navigate(page,sub){ if(page===state.page && sub===state.subPage){ render(); return; } state.page=page; state.subPage=sub||""; playNav(); render(); }
+
+document.addEventListener("pointerdown",e=>{
+  const t=e.target.closest(".btn,.btn-refresh,.btn-create-top,.s-clear,.nav-item,.sub-item,.tbl-row.clickable,.kpi");
+  if(t && !t.dataset.noRipple) ripple({currentTarget:t,clientX:e.clientX,clientY:e.clientY});
+});
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-action]"); if(!t) return;
+  if(t.classList.contains("btn-refresh")){ t.classList.add("spin"); setTimeout(()=>t.classList.remove("spin"),650); }
+  playClick();
+  handleAction(t.dataset.action,t.dataset.id,t);
+});
+async function handleAction(action,id,el){
+  switch(action){
+    case "nav":navigate(el.dataset.page,el.dataset.sub);break;
+    case "nav-sales":navigate("Sales","Invoices");break;
+    case "refresh":render();toast("Refreshed","","blue");break;
+    case "search":doSearch();break;
+    case "clear-search":state.search="";render();break;
+    case "new-invoice":newInvoice();break;
+    case "new-estimate":newEstimate();break;
+    case "new-creditnote":newCreditNote();break;
+    case "new-client":newClient();break;
+    case "new-vendor":newVendor();break;
+    case "new-product":newProduct();break;
+    case "new-expense":newExpense();break;
+    case "new-employee":newEmployee();break;
+    case "new-account":newAccount();break;
+    case "new-journal":newJournal();break;
+    case "record-payment":recordPayment();break;
+    case "run-payroll":runPayroll();break;
+    case "import-bank":importBankCSV();break;
+    case "invoice-click":invoiceActions(id);break;
+    case "estimate-click":estimateActions(id);break;
+    case "creditnote-click":creditNoteActions(id);break;
+    case "client-click":clientActions(id);break;
+    case "vendor-click":vendorActions(id);break;
+    case "product-click":productActions(id);break;
+    case "expense-click":expenseActions(id);break;
+    case "employee-click":employeeActions(id);break;
+    case "account-click":accountActions(id);break;
+    case "journal-click":journalActions(id);break;
+    case "bank-click":bankActions(id);break;
+    case "payment-click":paymentActions(id);break;
+    case "email-log-click":emailLogActions(id);break;
+    case "email-test":testEmailBackend();break;
+    case "fetch-replies":fetchReplies();break;
+    case "goto-email-log":navigate("EmailLog","");break;
+    case "edit-company":editCompany();break;
+    case "edit-tax":editTax();break;
+    case "edit-currency":editCurrency();break;
+    case "view-data":viewRawData();break;
+    case "load-sample":loadSample();break;
+    case "reset-all":resetAll();break;
+    case "reset-onboarding":
+      if(await confirmBox("Run setup wizard again?\n\nData will NOT be deleted.","Run Setup Again")){ try{ localStorage.removeItem(ONBOARD_KEY); }catch(e){} location.reload(); }
+      break;
+    case "export-invoices":exportSheetCSV("invoices");break;
+    case "export-all":exportAllCSV();break;
+    case "backup":backupFile();break;
+    case "restore":restoreFile();break;
+  }
+}
+function emailLogActions(id){const e=DB.emailLog.find(x=>x.id===id);if(e) openEmailDetail(e);}
+async function doSearch(){const r=await formModal("Search",[{key:"q",label:"Search",value:state.search,placeholder:"e.g. INV-001"}],"Search");if(r===null)return;state.search=(r.q||"").trim();render();}
+
+async function invoiceActions(invId){
+  const inv=DB.invoices.find(i=>i.id===invId); if(!inv)return;
+  const paid=getInvoicePaid(invId); const bal=safeNum(inv.total)-paid;
+  const client = DB.clients.find(c=>c.name.toLowerCase()===String(inv.client).toLowerCase()) || {};
+  const choice=await actionSheet(`Invoice ${invId}  •  ${inv.client}  •  ${money(inv.total)}`+"\nEmail: "+(client.email||"(not set)"),[
+    {label:"Mark as Paid",value:"P",cls:"green"},{label:"Mark as Pending",value:"N",cls:"blue"},{label:"Mark as Overdue",value:"O",cls:"red"},
+    {label:"Modify / Edit",value:"M",cls:"amber"},{label:"Record Payment",value:"Y",cls:"green"},
+    {label:"📧 Email Invoice",value:"E",cls:"green"},
+    {label:"Export PDF",value:"X",cls:"ghost"},{label:"Delete",value:"D",cls:"red"}]);
+  if(!choice)return;
+  if(["P","N","O"].includes(choice)){const map={P:"Paid",N:"Pending",O:"Overdue"};inv.status=map[choice];saveDB();render();toast("Status updated",invId,"green");}
+  else if(choice==="M") await editInvoice(invId);
+  else if(choice==="Y") await quickRecordPayment(invId);
+  else if(choice==="E") emailComposer(invId);
+  else if(choice==="X") exportInvoicePDF(invId);
+  else if(choice==="D"){ if(await confirmBox(`Delete invoice ${invId}?`,"Delete")){DB.invoices=DB.invoices.filter(i=>i.id!==invId);saveDB();render();toast("Deleted",invId,"red");} }
+}
+async function editInvoice(invId){
+  const inv=DB.invoices.find(i=>i.id===invId);if(!inv)return;
+  const r=await formModal(`Edit ${invId}`,[{key:"client",label:"Client Name",value:inv.client,required:true},{key:"dueDate",label:"Due Date",value:inv.dueDate},{key:"subtotal",label:"Subtotal",value:inv.subtotal},{key:"status",label:"Status",type:"select",value:inv.status,options:["Paid","Pending","Overdue","Partial"]},{key:"notes",label:"Description",value:inv.notes||""}],"Update");
+  if(!r)return; const sub=safeNum(r.subtotal); if(sub<=0){alertBox("Amount must be > 0","Invalid");return;}
+  const tax=sub*taxRate(); inv.client=r.client.trim(); inv.dueDate=r.dueDate.trim(); inv.status=r.status; inv.subtotal=sub; inv.tax=tax; inv.total=sub+tax; inv.notes=r.notes;
+  saveDB();render();toast("Updated",invId,"blue");
+}
+async function quickRecordPayment(invId){
+  const inv=DB.invoices.find(i=>i.id===invId);if(!inv)return;
+  const paid=getInvoicePaid(invId); const bal=safeNum(inv.total)-paid;
+  if(bal<=0.01){alertBox("Already fully paid.","Record Payment");return;}
+  const r=await formModal(`Record Payment — ${invId}`,[{key:"date",label:"Payment Date",value:todayISO()},{key:"amount",label:`Balance: ${money(bal)} — Amount`,value:bal.toFixed(2)},{key:"method",label:"Method",type:"select",value:"Cash",options:["Cash","Bank","Cheque","Card"]},{key:"ref",label:"Reference (optional)",value:""},{key:"notes",label:"Notes (optional)",value:""}],"Record");
+  if(!r)return; const amt=safeNum(r.amount);
+  if(amt<=0||amt>bal+0.01){alertBox("Invalid amount.","Invalid");return;}
+  const payId=nextId("PAY",DB.payments);
+  DB.payments.push({id:payId,date:r.date,invoiceId:invId,client:inv.client,amount:amt,method:r.method,reference:r.ref||"",notes:r.notes||""});
+  updateInvoiceStatusFromPayments(invId); saveDB();render(); toast("Payment recorded",`${payId} · ${money(amt)}`,"green");
+}
+async function recordPayment(){
+  const r=await formModal("Record Payment",[{key:"invoiceId",label:"Invoice ID",value:"",placeholder:"e.g. INV-001",required:true}],"Continue");
+  if(!r)return; const invId=r.invoiceId.trim();
+  const inv=DB.invoices.find(i=>i.id.toLowerCase()===invId.toLowerCase());
+  if(!inv){alertBox("Invoice not found.","Record Payment");return;}
+  await quickRecordPayment(inv.id);
+}
+async function paymentActions(payId){
+  const p=DB.payments.find(x=>x.id===payId);if(!p)return;
+  if(await confirmBox(`Delete payment ${payId}?`,"Delete")){DB.payments=DB.payments.filter(x=>x.id!==payId);updateInvoiceStatusFromPayments(p.invoiceId);saveDB();render();toast("Deleted",payId,"red");}
+}
+async function newInvoice(){
+  if(!DB.clients.length){ if(await confirmBox("No clients yet. Add one now?","New Invoice")) await newClient(); return; }
+  const clientNames=DB.clients.map(c=>c.name);
+  const r=await formModal("New Invoice",[
+    {key:"client",label:"Client",value:"",list:clientNames,required:true,placeholder:"Start typing client name..."},
+    {key:"dueDate",label:"Due Date",value:addDaysISO(30),required:true},
+    {key:"amount",label:"Amount",value:"0",required:true},
+    {key:"notes",label:"Description",value:"Services rendered"}],"Create Invoice");
+  if(!r)return; let client=r.client.trim(); if(!client)return;
+  if(!DB.clients.some(c=>c.name.toLowerCase()===client.toLowerCase())){ if(await confirmBox(`Add client "${client}"?`,"New Client")){ const cid=nextId("CL",DB.clients); DB.clients.push({id:cid,name:client,city:"",email:"",phone:"",ntn:""}); } }
+  const subtotal=safeNum(r.amount); if(subtotal<=0){alertBox("Amount must be > 0","Invalid");return;}
+  const tax=subtotal*taxRate(); const invId=nextId("INV",DB.invoices);
+  DB.invoices.push({id:invId,client,date:todayISO(),dueDate:r.dueDate.trim()||addDaysISO(30),status:"Pending",subtotal,tax,total:subtotal+tax,notes:r.notes||""});
+  saveDB();render(); toast("Invoice created",`${invId} · ${money(subtotal+tax)}`,"green");
+  setTimeout(async()=>{ if(await confirmBox(`Send this invoice by email now?`,"Send Email")){ emailComposer(invId); } }, 300);
+}
+async function newClient(){
+  const r=await formModal("New Client",[{key:"name",label:"Client Name",value:"",required:true},{key:"city",label:"City",value:""},{key:"email",label:"Email",value:""},{key:"phone",label:"Phone",value:""},{key:"ntn",label:"NTN",value:""}],"Add Client");
+  if(!r)return; const id=nextId("CL",DB.clients);
+  DB.clients.push({id,name:r.name.trim(),city:r.city.trim(),email:r.email.trim(),phone:r.phone.trim(),ntn:r.ntn.trim()});
+  saveDB();render(); toast("Client added",`${id} · ${r.name}`,"green");
+}
+async function clientActions(id){
+  const c=DB.clients.find(x=>x.id===id);if(!c)return;
+  const choice=await actionSheet(`Client ${id} — ${c.name}`,[{label:"Edit Client",value:"E",cls:"amber"},{label:"Delete Client",value:"D",cls:"red"}]);
+  if(!choice)return;
+  if(choice==="E"){const r=await formModal(`Edit ${id}`,[{key:"name",label:"Name",value:c.name,required:true},{key:"city",label:"City",value:c.city},{key:"email",label:"Email",value:c.email},{key:"phone",label:"Phone",value:c.phone},{key:"ntn",label:"NTN",value:c.ntn}],"Update");if(!r)return;c.name=r.name.trim();c.city=r.city;c.email=r.email;c.phone=r.phone;c.ntn=r.ntn;saveDB();render();toast("Updated",id,"blue");}
+  else if(await confirmBox(`Delete client ${id}?`,"Delete")){DB.clients=DB.clients.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}
+}
+async function newVendor(){
+  const r=await formModal("New Vendor",[{key:"name",label:"Vendor Name",value:"",required:true},{key:"city",label:"City",value:""},{key:"email",label:"Email",value:""},{key:"phone",label:"Phone",value:""},{key:"ntn",label:"NTN",value:""}],"Add");
+  if(!r)return; const id=nextId("VN",DB.vendors);
+  DB.vendors.push({id,name:r.name.trim(),city:r.city.trim(),email:r.email.trim(),phone:r.phone.trim(),ntn:r.ntn.trim(),balance:0});
+  saveDB();render(); toast("Vendor added",`${id}`,"green");
+}
+async function vendorActions(id){
+  const v=DB.vendors.find(x=>x.id===id);if(!v)return;
+  const choice=await actionSheet(`Vendor ${id} — ${v.name}`,[{label:"Edit Vendor",value:"E",cls:"amber"},{label:"Delete Vendor",value:"D",cls:"red"}]);
+  if(!choice)return;
+  if(choice==="E"){const r=await formModal(`Edit ${id}`,[{key:"name",label:"Name",value:v.name,required:true},{key:"city",label:"City",value:v.city},{key:"email",label:"Email",value:v.email},{key:"phone",label:"Phone",value:v.phone},{key:"ntn",label:"NTN",value:v.ntn}],"Update");if(!r)return;v.name=r.name.trim();v.city=r.city;v.email=r.email;v.phone=r.phone;v.ntn=r.ntn;saveDB();render();toast("Updated",id,"blue");}
+  else if(await confirmBox(`Delete vendor ${id}?`,"Delete")){DB.vendors=DB.vendors.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}
+}
+async function newProduct(){
+  const r=await formModal("New Product",[{key:"name",label:"Name",value:"",required:true},{key:"rate",label:"Sale Rate",value:"500"},{key:"cost",label:"Cost Price",value:"0"},{key:"stock",label:"Opening Stock",value:"0"},{key:"category",label:"Category",value:""}],"Add");
+  if(!r)return; const id=nextId("PR",DB.products);
+  DB.products.push({id,name:r.name.trim(),rate:safeNum(r.rate),cost:safeNum(r.cost),stock:safeNum(r.stock),category:r.category.trim()});
+  saveDB();render(); toast("Product added",`${id}`,"green");
+}
+async function productActions(id){
+  const p=DB.products.find(x=>x.id===id);if(!p)return;
+  const choice=await actionSheet(`Product ${id} — ${p.name}`,[{label:"Edit Product",value:"E",cls:"amber"},{label:"Adjust Stock",value:"A",cls:"blue"},{label:"Delete Product",value:"D",cls:"red"}]);
+  if(!choice)return;
+  if(choice==="E"){const r=await formModal(`Edit ${id}`,[{key:"name",label:"Name",value:p.name,required:true},{key:"rate",label:"Rate",value:p.rate},{key:"cost",label:"Cost",value:p.cost},{key:"stock",label:"Stock",value:p.stock},{key:"category",label:"Category",value:p.category}],"Update");if(!r)return;p.name=r.name.trim();p.rate=safeNum(r.rate);p.cost=safeNum(r.cost);p.stock=safeNum(r.stock);p.category=r.category;saveDB();render();toast("Updated",id,"blue");}
+  else if(choice==="A"){const r=await formModal(`Adjust Stock — ${p.name}`,[{key:"current",label:"Current",value:num2(p.stock)},{key:"adj",label:"Adjustment (+/-)",value:"0"}],"Apply");if(!r)return;p.stock=safeNum(p.stock)+safeNum(r.adj);saveDB();render();toast("Stock adjusted","","blue");}
+  else if(await confirmBox(`Delete product ${id}?`,"Delete")){DB.products=DB.products.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}
+}
+async function newExpense(){
+  const r=await formModal("New Expense",[{key:"date",label:"Date",value:todayISO(),required:true},{key:"category",label:"Category",value:"General",required:true},{key:"vendor",label:"Vendor",value:""},{key:"amount",label:"Amount",value:"0",required:true},{key:"tax",label:"Tax",value:"0"},{key:"account",label:"Account Code",value:"6900"},{key:"notes",label:"Notes",value:""}],"Record");
+  if(!r)return; const amt=safeNum(r.amount); if(amt<=0){alertBox("Amount must be > 0","Invalid");return;}
+  const tax=safeNum(r.tax); const acct=r.account.trim()||"6900"; const id=nextId("EXP",DB.expenses);
+  DB.expenses.push({id,date:r.date,category:r.category.trim(),vendor:r.vendor.trim(),amount:amt,tax,total:amt+tax,account:acct,notes:r.notes||""});
+  updateAccountBalance(acct,amt+tax); updateAccountBalance("1000",-(amt+tax));
+  saveDB();render(); toast("Expense recorded",`${id} · ${money(amt+tax)}`,"green");
+}
+async function expenseActions(id){const e=DB.expenses.find(x=>x.id===id);if(!e)return;if(await confirmBox(`Delete expense ${id}?`,"Delete")){DB.expenses=DB.expenses.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}}
+async function newEstimate(){
+  const r=await formModal("New Estimate",[{key:"client",label:"Client Name",value:"",list:DB.clients.map(c=>c.name),required:true},{key:"validUntil",label:"Valid Until",value:addDaysISO(30)},{key:"amount",label:"Amount",value:"0",required:true},{key:"notes",label:"Description",value:""}],"Create");
+  if(!r)return; const sub=safeNum(r.amount); if(sub<=0){alertBox("Amount must be > 0","Invalid");return;}
+  const tax=sub*taxRate(); const id=nextId("EST",DB.estimates);
+  DB.estimates.push({id,client:r.client.trim(),date:todayISO(),validUntil:r.validUntil,status:"Draft",subtotal:sub,tax,total:sub+tax,notes:r.notes||""});
+  saveDB();render(); toast("Estimate created",id,"green");
+}
+async function estimateActions(id){
+  const est=DB.estimates.find(x=>x.id===id);if(!est)return;
+  const choice=await actionSheet(`Estimate ${id}`,[{label:"Convert to Invoice",value:"C",cls:"green"},{label:"Delete",value:"D",cls:"red"}]);
+  if(!choice)return;
+  if(choice==="C"){const invId=nextId("INV",DB.invoices);DB.invoices.push({id:invId,client:est.client,date:todayISO(),dueDate:addDaysISO(30),status:"Pending",subtotal:est.subtotal,tax:est.tax,total:est.total,notes:est.notes});saveDB();render();toast("Converted",invId,"green");}
+  else if(await confirmBox(`Delete estimate ${id}?`,"Delete")){DB.estimates=DB.estimates.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}
+}
+async function newCreditNote(){
+  const r=await formModal("New Credit Note",[{key:"client",label:"Client Name",value:"",list:DB.clients.map(c=>c.name),required:true},{key:"invoiceRef",label:"Invoice ID (optional)",value:""},{key:"amount",label:"Amount",value:"0",required:true},{key:"reason",label:"Reason",value:"Return"}],"Create");
+  if(!r)return; const sub=safeNum(r.amount); if(sub<=0){alertBox("Amount must be > 0","Invalid");return;}
+  const tax=sub*taxRate(); const id=nextId("CN",DB.creditNotes);
+  DB.creditNotes.push({id,client:r.client.trim(),date:todayISO(),invoiceRef:r.invoiceRef.trim(),subtotal:sub,tax,total:sub+tax,reason:r.reason});
+  saveDB();render(); toast("Credit note created",id,"green");
+}
+async function creditNoteActions(id){if(await confirmBox(`Delete credit note ${id}?`,"Delete")){DB.creditNotes=DB.creditNotes.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}}
+async function newEmployee(){
+  const r=await formModal("New Employee",[{key:"name",label:"Name",value:"",required:true},{key:"cnic",label:"CNIC",value:""},{key:"designation",label:"Designation",value:""},{key:"basic",label:"Basic Salary",value:"0"},{key:"allowances",label:"Allowances",value:"0"},{key:"deductions",label:"Deductions",value:"0"},{key:"joinDate",label:"Join Date",value:todayISO()}],"Add");
+  if(!r)return; const id=nextId("EMP",DB.employees);
+  DB.employees.push({id,name:r.name.trim(),cnic:r.cnic,designation:r.designation,basic:safeNum(r.basic),allowances:safeNum(r.allowances),deductions:safeNum(r.deductions),joinDate:r.joinDate,status:"Active"});
+  saveDB();render(); toast("Employee added",`${id} · ${r.name}`,"green");
+}
+async function employeeActions(id){
+  const e=DB.employees.find(x=>x.id===id);if(!e)return;
+  const choice=await actionSheet(`Employee ${id}`,[{label:"Update Salary",value:"S",cls:"amber"},{label:"Delete",value:"D",cls:"red"}]);
+  if(!choice)return;
+  if(choice==="S"){const r=await formModal(`Update Salary`,[{key:"basic",label:"Basic",value:e.basic},{key:"allowances",label:"Allowances",value:e.allowances},{key:"deductions",label:"Deductions",value:e.deductions}],"Update");if(!r)return;e.basic=safeNum(r.basic);e.allowances=safeNum(r.allowances);e.deductions=safeNum(r.deductions);saveDB();render();toast("Updated",id,"blue");}
+  else if(await confirmBox(`Delete employee ${id}?`,"Delete")){DB.employees=DB.employees.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}
+}
+async function runPayroll(){
+  if(!DB.employees.length){alertBox("No employees.","Run Payroll");return;}
+  const r=await formModal("Run Payroll",[{key:"month",label:"Month (YYYY-MM)",value:todayISO().slice(0,7),required:true}],"Process");
+  if(!r)return; const month=r.month.trim(); let totalNet=0,cnt=0; const stamp=todayISO().replace(/-/g,"");
+  DB.employees.forEach(e=>{
+    if(String(e.status).toUpperCase()!=="ACTIVE")return;
+    const basic=safeNum(e.basic),allow=safeNum(e.allowances),ded=safeNum(e.deductions);
+    const tax=calcIncomeTax(basic),net=basic+allow-ded-tax;cnt++;
+    DB.payroll.push({id:`PAY-${stamp}-${String(cnt).padStart(2,"0")}`,month,employeeId:e.id,basic,allowances:allow,deductions:ded,tax,netPay:net,status:"Generated"});
+    totalNet+=net;
+  });
+  saveDB();render(); toast("Payroll processed",`${cnt} employees · ${money(totalNet)}`,"green");
+}
+async function newAccount(){
+  const r=await formModal("New Account",[{key:"code",label:"Code",value:"",required:true},{key:"name",label:"Name",value:"",required:true},{key:"type",label:"Type",type:"select",value:"Asset",options:["Asset","Liability","Equity","Revenue","Expense"]},{key:"parent",label:"Parent Code",value:""},{key:"opening",label:"Opening Balance",value:"0"}],"Add");
+  if(!r)return; if(DB.accounts.some(a=>a.code===r.code.trim())){alertBox("Account exists","Duplicate");return;}
+  DB.accounts.push({code:r.code.trim(),name:r.name.trim(),type:r.type,parent:r.parent.trim(),opening:safeNum(r.opening),balance:safeNum(r.opening)});
+  saveDB();render(); toast("Account added",r.code,"green");
+}
+async function accountActions(code){const a=DB.accounts.find(x=>x.code===code);if(!a)return;if(await confirmBox(`Delete account ${code}?`,"Delete")){DB.accounts=DB.accounts.filter(x=>x.code!==code);saveDB();render();toast("Deleted",code,"red");}}
+async function newJournal(){
+  const r=await formModal("New Journal Entry",[{key:"date",label:"Date",value:todayISO(),required:true},{key:"account",label:"Account Code",value:"",required:true},{key:"debit",label:"Debit",value:"0"},{key:"credit",label:"Credit",value:"0"},{key:"description",label:"Description",value:""}],"Create");
+  if(!r)return; const dr=safeNum(r.debit),cr=safeNum(r.credit);
+  if(dr>0&&cr>0){alertBox("Only one of Debit/Credit.","Invalid");return;}
+  if(dr===0&&cr===0){alertBox("Enter a Debit or Credit.","Invalid");return;}
+  const acct=r.account.trim();
+  if(!DB.accounts.some(a=>a.code===acct)){alertBox(`Account "${acct}" not found.`,"Invalid");return;}
+  const id=nextId("JE",DB.journal);
+  DB.journal.push({id,date:r.date,account:acct,debit:dr,credit:cr,description:r.description,refType:"Manual",refId:""});
+  updateAccountBalance(acct,dr-cr);saveDB();render();toast("Entry created",id,"green");
+}
+async function journalActions(id){if(await confirmBox(`Delete entry ${id}?`,"Delete")){DB.journal=DB.journal.filter(x=>x.id!==id);saveDB();render();toast("Deleted",id,"red");}}
+function importBankCSV(){
+  const input=document.createElement("input");input.type="file";input.accept=".csv";
+  input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{const text=String(ev.target.result||"");const lines=text.split(/\r?\n/).filter(l=>l.trim().length);let count=0;for(let i=1;i<lines.length;i++){const parts=lines[i].split(",");if(parts.length>=4){DB.bankTxn.push({id:"BT-"+String(DB.bankTxn.length+1).padStart(4,"0"),date:parts[0].trim(),description:parts[1].trim(),debit:safeNum(parts[2]),credit:safeNum(parts[3]),balance:0,matchedWith:"",status:"Pending"});count++;}}saveDB();render();toast("Imported",`${count} transactions`,"green");};reader.readAsText(file);};input.click();
+}
+async function bankActions(id){
+  const b=DB.bankTxn.find(x=>x.id===id);if(!b)return;
+  const choice=await actionSheet(`Transaction ${id}`,[{label:"Mark as Matched",value:"M",cls:"green"},{label:"Mark as Pending",value:"U",cls:"amber"},{label:"Delete",value:"D",cls:"red"}]);
+  if(!choice)return; if(choice==="M")b.status="Matched"; else if(choice==="U")b.status="Pending"; else DB.bankTxn=DB.bankTxn.filter(x=>x.id!==id);
+  saveDB();render(); toast("Updated",id,"blue");
+}
+function exportInvoicePDF(invId){
+  const inv=DB.invoices.find(i=>i.id===invId);if(!inv)return;
+  const sub=safeNum(inv.subtotal),tax=safeNum(inv.tax),tot=safeNum(inv.total);
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(inv.id)}</title><style>body{font-family:Arial;padding:44px;max-width:760px;margin:0 auto;}.hdr{display:flex;justify-content:space-between;border-bottom:3px solid #222;padding-bottom:20px;}.co{font-size:22px;font-weight:700;}.inv-t{font-size:22px;font-weight:700;letter-spacing:3px;}.meta{display:flex;justify-content:space-between;margin-top:30px;}table{width:100%;border-collapse:collapse;margin-top:30px;}th{background:#1e1e1e;color:#fff;padding:10px 12px;text-align:left;}td{padding:12px;border-bottom:1px solid #e5e5e5;}.tot-wrap{margin-top:22px;margin-left:auto;width:300px;}.tot{display:flex;justify-content:space-between;padding:8px 12px;}.tot.big{background:#faf5e6;font-weight:700;font-size:17px;padding:12px;}</style></head><body><div class="hdr"><div><div class="co">${esc(DB.config.companyName)}</div><div>${esc(DB.config.companyEmail)}</div></div><div><div class="inv-t">INVOICE</div><div>${esc(inv.id)}</div></div></div><div class="meta"><div><b>BILL TO</b><br>${esc(inv.client)}</div><div style="text-align:right;"><b>DATE</b> ${esc(inv.date)}<br><b>DUE</b> ${esc(inv.dueDate)}</div></div><table><tr><th>DESCRIPTION</th><th style="text-align:right;">AMOUNT</th></tr><tr><td>${esc(inv.notes||"Services")}</td><td style="text-align:right;">${sub.toFixed(2)}</td></tr></table><div class="tot-wrap"><div class="tot"><span>Subtotal</span><span>${sub.toFixed(2)}</span></div><div class="tot"><span>Tax</span><span>${tax.toFixed(2)}</span></div><div class="tot big"><span>TOTAL</span><span>${currency()} ${tot.toFixed(2)}</span></div></div></body></html>`;
+  const w=window.open("","_blank","width=820,height=1000");
+  if(!w){alertBox("Pop-up blocked.","PDF");return;}
+  w.document.open();w.document.write(html);w.document.close();
+  setTimeout(()=>{w.focus();w.print();},400);
+  toast("PDF opening",invId,"blue");
+}
+function download(filename,content,mime){const blob=new Blob([content],{type:(mime||"text/csv")+";charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},400);}
+function csvEsc(s){s=String(s??"");if(s.indexOf(",")!==-1||s.indexOf('"')!==-1||s.indexOf("\n")!==-1)return '"'+s.replace(/"/g,'""')+'"';return s;}
+function toCSV(rows){return rows.map(r=>r.map(csvEsc).join(",")).join("\r\n");}
+function exportSheetCSV(which){
+  const maps={
+    invoices:{file:"Velora_Invoices",rows:DB.invoices,cols:["ID","Client","Date","DueDate","Status","Subtotal","Tax","Total","Notes"],row:i=>[i.id,i.client,i.date,i.dueDate,i.status,i.subtotal,i.tax,i.total,i.notes]},
+    clients:{file:"Velora_Clients",rows:DB.clients,cols:["ID","Name","City","Email","Phone","NTN"],row:c=>[c.id,c.name,c.city,c.email,c.phone,c.ntn]},
+    vendors:{file:"Velora_Vendors",rows:DB.vendors,cols:["ID","Name","City","Email","Phone","NTN","Balance"],row:v=>[v.id,v.name,v.city,v.email,v.phone,v.ntn,v.balance]},
+    products:{file:"Velora_Products",rows:DB.products,cols:["ID","Name","Rate","Cost","Stock","Category"],row:p=>[p.id,p.name,p.rate,p.cost,p.stock,p.category]},
+    expenses:{file:"Velora_Expenses",rows:DB.expenses,cols:["ID","Date","Category","Vendor","Amount","Tax","Total"],row:e=>[e.id,e.date,e.category,e.vendor,e.amount,e.tax,e.total]},
+    emailLog:{file:"Velora_EmailLog",rows:DB.emailLog,cols:["ID","Timestamp","To","Subject","Status"],row:e=>[e.id,e.ts,e.to,e.subject,e.status]},
+    replies:{file:"Velora_Replies",rows:DB.replies||[],cols:["From","Subject","Date","Snippet"],row:r=>[r.from,r.subject,r.date,r.snippet]}
+  };
+  const m=maps[which]; if(!m)return;
+  if(!m.rows.length){alertBox("No data to export.","Export");return;}
+  const csv=[m.cols].concat(m.rows.map(m.row));
+  download(m.file+"_"+todayISO().replace(/-/g,"")+".csv",toCSV(csv));
+  toast("Exported",m.file+".csv","green");
+}
+function exportAllCSV(){
+  ["invoices","clients","vendors","products","expenses","emailLog","replies"].forEach((k,i)=>{setTimeout(()=>exportSheetCSV(k),i*350);});
+  toast("Exporting all","Files downloading","blue");
+}
+function backupFile(){download("Velora_Backup_"+todayISO().replace(/-/g,"")+".json",JSON.stringify(DB,null,2),"application/json");toast("Backup created","Velora_Backup.json","green");}
+function restoreFile(){
+  const input=document.createElement("input");input.type="file";input.accept=".json,application/json";
+  input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=async ev=>{try{const parsed=JSON.parse(ev.target.result);if(!parsed||typeof parsed!=="object")throw new Error("Invalid file.");if(!(await confirmBox("Replace current data?","Restore")))return;const base=defaultDB();DB=Object.assign(base,parsed);DB.config=Object.assign(base.config,parsed.config||{});if(!Array.isArray(DB.accounts)||!DB.accounts.length)DB.accounts=defaultAccounts();if(!Array.isArray(DB.emailLog))DB.emailLog=[];if(!Array.isArray(DB.replies))DB.replies=[];saveDB();render();toast("Backup restored","","green");}catch(err){toast("Restore failed",err.message,"red");}};reader.readAsText(file);};input.click();
+}
+async function editCompany(){
+  const r=await formModal("Company Info",[{key:"name",label:"Company Name",value:DB.config.companyName,required:true},{key:"email",label:"Company Email",value:DB.config.companyEmail},{key:"senderName",label:"Sender Name",value:DB.config.senderName||""},{key:"senderEmail",label:"Reply-To Email",value:DB.config.senderEmail||""}],"Save");
+  if(!r)return; DB.config.companyName=r.name.trim(); DB.config.companyEmail=r.email.trim(); DB.config.senderName=r.senderName.trim(); DB.config.senderEmail=r.senderEmail.trim();
+  saveDB();render(); toast("Company info saved",DB.config.companyName,"green");
+}
+async function editTax(){
+  const r=await formModal("Tax Rate",[{key:"rate",label:"Tax Rate (%)",value:DB.config.taxRatePct}],"Save");
+  if(!r)return; let v=safeNum(r.rate); if(v<0)v=0; if(v>100)v=100; DB.config.taxRatePct=v; saveDB();render(); toast("Updated",`${num2(v)}%`,"green");
+}
+async function editCurrency(){
+  const r=await formModal("Currency",[{key:"currency",label:"Currency",type:"select",value:DB.config.currency,options:["PKR","INR","USD","AED","SAR","GBP","EUR"]}],"Save");
+  if(!r)return; DB.config.currency=(r.currency||"PKR").toUpperCase(); saveDB();render(); toast("Updated",DB.config.currency,"green");
+}
+function viewRawData(){
+  const json=JSON.stringify(DB,null,2);
+  const ov=openModal(`<div class="modal-title">Raw Data</div><div class="modal-body"><textarea class="mono" readonly>${esc(json)}</textarea></div><div class="modal-actions"><button class="btn ghost" data-close>Close</button><button class="btn green" data-copy>Copy</button></div>`,{width:Math.min(720,window.innerWidth-40)});
+  ov.querySelector("[data-close]").onclick=()=>closeModal(ov);
+  ov.querySelector("[data-copy]").onclick=()=>{const ta=ov.querySelector("textarea");ta.select();try{document.execCommand("copy");}catch(e){}toast("Copied","","green");};
+}
+async function resetAll(){
+  if(!(await confirmBox("DELETE ALL DATA?","Reset All Data")))return;
+  if(!(await confirmBox("Final confirmation?","Reset")))return;
+  const keep=Object.assign({},DB.config);DB=defaultDB();DB.config=keep;
+  state.search="";state.page="Dashboard";state.subPage="";saveDB();render();toast("All data reset","","red");
+}
+async function loadSample(){
+  if(!(await confirmBox("Load sample data?\n\nExisting data NOT deleted.","Load Sample")))return;
+  const products=[["PR-001","Website Design",1500,800,10,"Services"],["PR-002","UI/UX Design",600,300,15,"Services"],["PR-003","Brand Strategy",400,200,20,"Services"],["PR-004","Monthly Maintenance",300,100,50,"Services"]];
+  products.forEach(p=>{if(!DB.products.some(x=>x.id===p[0]))DB.products.push({id:p[0],name:p[1],rate:p[2],cost:p[3],stock:p[4],category:p[5]});});
+  const clients=[["CL-001","Ali Khan","Karachi","ali@example.com","0300-1234567","1234567-8"],["CL-002","Sara Ahmed","Lahore","sara@example.com","0300-2345678",""],["CL-003","Bilal Hussain","Islamabad","bilal@example.com","",""]];
+  clients.forEach(c=>{if(!DB.clients.some(x=>x.id===c[0]))DB.clients.push({id:c[0],name:c[1],city:c[2],email:c[3],phone:c[4],ntn:c[5]});});
+  const inv=[["INV-001","Ali Khan",-10,20,"Paid",2100,210,2310,"Website"],["INV-002","Sara Ahmed",-8,22,"Paid",900,90,990,"Branding"],["INV-003","Bilal Hussain",-30,-5,"Overdue",500,50,550,"SEO"]];
+  inv.forEach(i=>{if(!DB.invoices.some(x=>x.id===i[0]))DB.invoices.push({id:i[0],client:i[1],date:addDaysISO(i[2]),dueDate:addDaysISO(i[3]),status:i[4],subtotal:i[5],tax:i[6],total:i[7],notes:i[8]});});
+  const exp=[["EXP-001",-5,"Rent","Landlord",50000,0,50000,"6100"],["EXP-002",-3,"Utilities","K-Electric",8000,0,8000,"6200"]];
+  exp.forEach(e=>{if(!DB.expenses.some(x=>x.id===e[0]))DB.expenses.push({id:e[0],date:addDaysISO(e[1]),category:e[2],vendor:e[3],amount:e[4],tax:e[5],total:e[6],account:e[7]});});
+  updateAccountBalance("4000",2310+990+550);updateAccountBalance("6100",50000);updateAccountBalance("6200",8000);
+  saveDB();state.page="Dashboard";state.subPage="";render();
+  toast("Sample data loaded","4 Products · 3 Clients · 3 Invoices","green");
+}
+(function init(){
+  if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccounts();
+  if(!Array.isArray(DB.emailLog))DB.emailLog=[];
+  if(!Array.isArray(DB.replies))DB.replies=[];
+  saveDB();
+  initOnboarding();
+  render();
+  setInterval(()=>{
+    const ov = document.getElementById("onboarding");
+    if(EMAIL_BACKEND_URL && ov && ov.style.display === "none"){
+      fetchReplies().catch(()=>{});
+    }
+  }, 120000);
+})();
+</script>
+</body>
+</html>
