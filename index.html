@@ -389,25 +389,20 @@ const state={page:"Dashboard",subPage:"",search:""};
 
 /* ============================================================
    BEAUTIFUL SOUND SYSTEM
-   Uses Web Audio API with harmonics, reverb & smooth envelopes
    ============================================================ */
 let audioCtx = null;
 let masterGain = null;
 let reverbNode = null;
 let convolver = null;
-let soundEnabled = true; // Always on — no toggle
+let soundEnabled = true;
 
 function initAudio(){
   if(audioCtx) return;
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Master gain for overall volume control
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.35;
     masterGain.connect(audioCtx.destination);
-    
-    // Simple reverb using feedback delay network
     reverbNode = audioCtx.createGain();
     reverbNode.gain.value = 0.12;
     const delay1 = audioCtx.createDelay();
@@ -416,126 +411,90 @@ function initAudio(){
     delay2.delayTime.value = 0.13;
     const feedback = audioCtx.createGain();
     feedback.gain.value = 0.35;
-    
     reverbNode.connect(delay1);
     delay1.connect(delay2);
     delay2.connect(feedback);
     feedback.connect(delay1);
     delay2.connect(masterGain);
-    
   } catch(e){ audioCtx = null; }
 }
 document.addEventListener("click", function once(){ initAudio(); document.removeEventListener("click", once); }, {once:true});
 document.addEventListener("keydown", function once(){ initAudio(); document.removeEventListener("keydown", once); }, {once:true});
 document.addEventListener("touchstart", function once(){ initAudio(); document.removeEventListener("touchstart", once); }, {once:true});
 
-// Core note player with smooth ADSR envelope
 function playNote(freq, startOffset, dur, vol, type, reverbAmount){
   if(!audioCtx) return;
   try {
     const t = audioCtx.currentTime + startOffset;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    
     osc.type = type || 'sine';
     osc.frequency.setValueAtTime(freq, t);
-    
-    // Smooth ADSR envelope
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(vol, t + 0.012);          // Attack
-    gain.gain.exponentialRampToValueAtTime(vol * 0.6, t + 0.08); // Decay
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);     // Release
-    
+    gain.gain.linearRampToValueAtTime(vol, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(vol * 0.6, t + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     osc.connect(gain);
     gain.connect(masterGain);
-    
-    // Send some to reverb
     if(reverbAmount && reverbNode){
       const sendGain = audioCtx.createGain();
       sendGain.gain.value = reverbAmount;
       gain.connect(sendGain);
       sendGain.connect(reverbNode);
     }
-    
     osc.start(t);
     osc.stop(t + dur + 0.05);
   } catch(e){}
 }
-
-// Rich layered sound with two frequencies (fundamental + harmonic)
 function playRich(freq, startOffset, dur, vol){
   playNote(freq, startOffset, dur, vol, 'sine', 0.3);
   playNote(freq * 2, startOffset, dur * 0.7, vol * 0.25, 'sine', 0.15);
   playNote(freq * 3, startOffset, dur * 0.5, vol * 0.08, 'sine', 0.1);
 }
+function playClick(){ if(!audioCtx) return; playNote(1200, 0, 0.03, 0.06, 'sine', 0.2); playNote(2400, 0, 0.02, 0.03, 'sine', 0); }
+function playSuccess(){ if(!audioCtx) return; playRich(523.25, 0.00, 0.55, 0.10); playRich(659.25, 0.07, 0.55, 0.10); playRich(783.99, 0.14, 0.60, 0.11); playRich(1046.5, 0.22, 0.70, 0.09); }
+function playError(){ if(!audioCtx) return; playNote(392.00, 0.00, 0.25, 0.08, 'sine', 0.3); playNote(311.13, 0.12, 0.35, 0.08, 'sine', 0.3); }
+function playSend(){ if(!audioCtx) return; playNote(600, 0.00, 0.10, 0.07, 'sine', 0.25); playNote(800, 0.05, 0.12, 0.08, 'sine', 0.25); playNote(1050, 0.10, 0.18, 0.09, 'sine', 0.3); playNote(1400, 0.16, 0.25, 0.07, 'sine', 0.35); }
+function playNotify(){ if(!audioCtx) return; playRich(880, 0.00, 0.55, 0.09); playRich(1174.66, 0.10, 0.65, 0.08); }
+function playOpen(){ if(!audioCtx) return; playNote(440, 0.00, 0.12, 0.04, 'sine', 0.3); playNote(587.33, 0.05, 0.15, 0.05, 'sine', 0.3); }
+function playDelete(){ if(!audioCtx) return; playNote(440, 0.00, 0.15, 0.07, 'sine', 0.3); playNote(329.63, 0.08, 0.22, 0.07, 'sine', 0.3); }
+function playNav(){ if(!audioCtx) return; playNote(660, 0.00, 0.08, 0.03, 'sine', 0.2); }
 
-/* ---------- Sound presets ---------- */
+/* ==================== EMAIL BACKEND (CLOUDFLARE WORKER) ==================== */
+const BACKEND_URL = "https://velora-email-server.mflow-velora-2026.workers.dev";
 
-// Soft, subtle click — like a wooden tick
-function playClick(){
-  if(!audioCtx) return;
-  playNote(1200, 0, 0.03, 0.06, 'sine', 0.2);
-  playNote(2400, 0, 0.02, 0.03, 'sine', 0);
+function getGmailTokens(){
+  try{ return JSON.parse(localStorage.getItem("velora_gmail_tokens")||"null"); }catch(e){ return null; }
 }
-
-// Beautiful ascending major chord — C-E-G-C (success)
-function playSuccess(){
-  if(!audioCtx) return;
-  playRich(523.25, 0.00, 0.55, 0.10);   // C5
-  playRich(659.25, 0.07, 0.55, 0.10);   // E5
-  playRich(783.99, 0.14, 0.60, 0.11);   // G5
-  playRich(1046.5, 0.22, 0.70, 0.09);   // C6
+function setGmailTokens(t){
+  try{ localStorage.setItem("velora_gmail_tokens", JSON.stringify(t)); }catch(e){}
 }
-
-// Gentle falling tone — soft buzz (error)
-function playError(){
-  if(!audioCtx) return;
-  playNote(392.00, 0.00, 0.25, 0.08, 'sine', 0.3);   // G4
-  playNote(311.13, 0.12, 0.35, 0.08, 'sine', 0.3);   // Eb4
+function clearGmailTokens(){
+  try{ localStorage.removeItem("velora_gmail_tokens"); }catch(e){}
 }
-
-// Whoosh-up rising tone (send email)
-function playSend(){
-  if(!audioCtx) return;
-  playNote(600, 0.00, 0.10, 0.07, 'sine', 0.25);
-  playNote(800, 0.05, 0.12, 0.08, 'sine', 0.25);
-  playNote(1050, 0.10, 0.18, 0.09, 'sine', 0.3);
-  playNote(1400, 0.16, 0.25, 0.07, 'sine', 0.35);
+function getConnectedEmail(){
+  const t = getGmailTokens();
+  return (t && t.email) ? t.email : null;
 }
-
-// Soft bell chime (notification)
-function playNotify(){
-  if(!audioCtx) return;
-  playRich(880, 0.00, 0.55, 0.09);    // A5
-  playRich(1174.66, 0.10, 0.65, 0.08); // D6
+async function connectGmail(){
+  try{
+    const res = await fetch(BACKEND_URL + "/api/auth/google");
+    const j = await res.json();
+    if(j.url){
+      toast("Opening Google...","Please allow access","blue");
+      setTimeout(()=>{ window.location.href = j.url; }, 400);
+    } else {
+      toast("Connect failed", j.error||"Try again", "red");
+    }
+  }catch(e){
+    toast("Connect failed", String(e.message||e), "red");
+  }
 }
-
-// Warm modal open (soft, pleasant)
-function playOpen(){
-  if(!audioCtx) return;
-  playNote(440, 0.00, 0.12, 0.04, 'sine', 0.3);
-  playNote(587.33, 0.05, 0.15, 0.05, 'sine', 0.3);
+function disconnectGmail(){
+  clearGmailTokens();
+  render();
+  toast("Gmail disconnected","You can reconnect anytime","blue");
 }
-
-// Soft down-tone (delete)
-function playDelete(){
-  if(!audioCtx) return;
-  playNote(440, 0.00, 0.15, 0.07, 'sine', 0.3);   // A4
-  playNote(329.63, 0.08, 0.22, 0.07, 'sine', 0.3); // E4
-}
-
-// Subtle page nav sound
-function playNav(){
-  if(!audioCtx) return;
-  playNote(660, 0.00, 0.08, 0.03, 'sine', 0.2);
-}
-
-/* ==================== EMAIL BACKEND ==================== */
-const DEFAULT_BACKEND_URL = "https://script.google.com/macros/s/AKfycbzSYMyql6rtUV6dI5JYFhjAve-SSNSlEA2toSM0HoOO2vwgnwwl3iyodpAm9dUt9Blo6w/exec";
-let EMAIL_BACKEND_URL = (function(){
-  try{ const saved = localStorage.getItem("velora_backend_url"); if(saved && saved.trim()) return saved.trim(); }catch(e){}
-  return DEFAULT_BACKEND_URL;
-})();
 
 /* ==================== ONBOARDING ==================== */
 const ONBOARD_KEY = "velora_onboarded_v1";
@@ -693,28 +652,46 @@ function buildInvoiceContext(inv){
 }
 function generateEmailId(){const stamp=new Date().toISOString().slice(0,19).replace(/[-:T]/g,"");return "EML-"+stamp.slice(0,14);}
 function saveEmailLog(entry){
-  DB.emailLog.unshift(Object.assign({id: generateEmailId(), ts: nowStamp(), status: "sent", method: "GAS"}, entry));
+  DB.emailLog.unshift(Object.assign({id: generateEmailId(), ts: nowStamp(), status: "sent", method: "Gmail"}, entry));
   if(DB.emailLog.length > 500) DB.emailLog.length = 500;
   saveDB();
 }
 async function sendEmailViaBackend(data){
-  if(!EMAIL_BACKEND_URL){ return { success:false, error:"Backend URL not configured." }; }
+  const t = getGmailTokens();
+  if(!t || !t.tokens){
+    return { success:false, error:"Gmail not connected. Go to Settings → Connect Gmail." };
+  }
   try{
-    await fetch(EMAIL_BACKEND_URL, {
-      method: "POST", mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({to: data.to, subject: data.subject, body: data.body, fromName: data.fromName || DB.config.senderName || DB.config.companyName, fromEmail: data.fromEmail || DB.config.senderEmail || DB.config.companyEmail, invoiceId: data.invoiceId || "", client: data.client || ""})
+    const res = await fetch(BACKEND_URL + "/api/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tokens: t.tokens,
+        to: data.to,
+        cc: data.cc||"",
+        bcc: data.bcc||"",
+        subject: data.subject,
+        body: data.body
+      })
     });
-    return { success:true };
-  }catch(err){ return { success:false, error: String(err && err.message || err) }; }
+    const j = await res.json();
+    if(j.ok) return { success: true };
+    return { success:false, error: j.error || "Send failed" };
+  }catch(err){
+    return { success:false, error: String(err && err.message || err) };
+  }
 }
 
 async function fetchReplies(){
-  if(!EMAIL_BACKEND_URL){ toast("Backend not configured","Add URL in Settings","red"); return; }
+  const t = getGmailTokens();
+  if(!t || !t.tokens){ toast("Connect Gmail first","Go to Settings","red"); return; }
   toast("Checking for replies...","Please wait","blue");
   try{
-    const url = EMAIL_BACKEND_URL + "?action=getReplies";
-    const res = await fetch(url, {method: "GET"});
+    const res = await fetch(BACKEND_URL + "/api/replies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tokens: t.tokens, subject: "" })
+    });
     const data = await res.json();
     if(data && Array.isArray(data.replies)){
       const existing = (DB.replies || []).map(r=>r.date + "|" + r.from);
@@ -740,12 +717,17 @@ async function fetchReplies(){
       toast("No replies found", "Try again later", "amber");
     }
   }catch(err){
-    toast("Fetch failed", "Check your backend URL", "red");
+    toast("Fetch failed", "Check your connection", "red");
   }
 }
 
 function emailComposer(invId){
   const inv = DB.invoices.find(i=>i.id===invId); if(!inv){ toast("Invoice not found",invId,"red"); return; }
+  const connected = getConnectedEmail();
+  if(!connected){
+    toast("Connect Gmail first","Go to Settings → Connect Gmail","red");
+    return;
+  }
   const ctx = buildInvoiceContext(inv);
   const client = DB.clients.find(c=>c.name.toLowerCase()===String(inv.client).toLowerCase()) || {};
   const defaultTo = client.email || "";
@@ -757,11 +739,15 @@ function emailComposer(invId){
       <div class="composer-meta">
         <div class="ico">${esc(inv.id.slice(-2))}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;color:var(--muted-2);">SENDING INVOICE</div>
+          <div style="font-size:11px;color:var(--muted-2);">SENDING FROM <b style="color:var(--gold);">${esc(connected)}</b></div>
           <div style="font-size:12.5px;color:var(--text);font-weight:600;margin-top:2px;">${esc(inv.id)} · ${esc(inv.client)} · <b style="color:var(--gold);">${esc(money(inv.total))}</b></div>
         </div>
       </div>
       <label class="field"><span>To (recipient email)</span><input id="ec_to" type="email" value="${esc(defaultTo)}" placeholder="client@example.com"></label>
+      <div class="row" style="gap:10px;">
+        <label class="field" style="flex:1;"><span>Cc (optional)</span><input id="ec_cc" type="text" value="" placeholder="cc@example.com"></label>
+        <label class="field" style="flex:1;"><span>Bcc (optional)</span><input id="ec_bcc" type="text" value="" placeholder="bcc@example.com"></label>
+      </div>
       <label class="field"><span>Subject</span><input id="ec_subject" type="text" value="${esc(defaultSubject)}"></label>
       <label class="field"><span>Message body</span><textarea id="ec_body" class="email-body">${esc(defaultBody)}</textarea></label>
     </div>
@@ -774,6 +760,8 @@ function emailComposer(invId){
   ov.querySelector("[data-ec-cancel]").onclick = ()=> closeModal(ov);
   ov.querySelector("[data-ec-send]").onclick = async ()=>{
     const to = ov.querySelector("#ec_to").value.trim();
+    const cc = ov.querySelector("#ec_cc").value.trim();
+    const bcc = ov.querySelector("#ec_bcc").value.trim();
     const subject = ov.querySelector("#ec_subject").value.trim();
     const bodyText = ov.querySelector("#ec_body").value;
     if(!to){ toast("Recipient required","","red"); return; }
@@ -784,10 +772,10 @@ function emailComposer(invId){
     sendBtn.disabled = true; sendBtn.style.opacity = ".7";
     sendBtn.innerHTML = `Sending<span class="sending-dots"><span></span><span></span><span></span></span>`;
     playSend();
-    const result = await sendEmailViaBackend({to, subject, body: bodyText, invoiceId: inv.id, client: inv.client});
+    const result = await sendEmailViaBackend({to, cc, bcc, subject, body: bodyText, invoiceId: inv.id, client: inv.client});
     if(result.success){
       saveEmailLog({invoiceId: inv.id, to, subject, body: bodyText, client: inv.client, status:"sent"});
-      closeModal(ov); toast("Email sent! ✉",`To ${to}`,"green"); render();
+      closeModal(ov); toast("Email sent! ✉",`From ${connected} → ${to}`,"green"); render();
     }else{
       saveEmailLog({invoiceId: inv.id, to, subject, body: bodyText, client: inv.client, status:"failed", error: result.error});
       toast("Send failed", result.error, "red");
@@ -797,13 +785,23 @@ function emailComposer(invId){
 }
 
 async function testEmailBackend(){
-  const r = await formModal("Send Test Email",[{key:"to",label:"Send test email to",value: DB.config.senderEmail || DB.config.companyEmail, required:true, placeholder:"your-email@gmail.com"}],"Send Test");
+  const connected = getConnectedEmail();
+  if(!connected){
+    toast("Gmail not connected","Go to Settings → Connect Gmail","red");
+    return;
+  }
+  const r = await formModal("Send Test Email",[{key:"to",label:"Send test email to",value: connected, required:true, placeholder:"your-email@gmail.com"}],"Send Test");
   if(!r) return;
   toast("Sending test...","Please wait","blue");
   playSend();
-  const result = await sendEmailViaBackend({to: r.to, subject: "✅ Velora Studio — Test Email", body: "This is a test email from Velora Studio.\n\nIf you received this, your email backend is working perfectly!\n\nSent at: " + nowStamp(), invoiceId: "", client: "Test"});
-  if(result.success){ saveEmailLog({invoiceId:"TEST",to:r.to,subject:"Test Email",body:"Velora test",client:"Test",status:"sent"}); toast("Test sent!","Check your inbox","green"); render(); }
-  else{ toast("Test failed",result.error,"red"); }
+  const result = await sendEmailViaBackend({to: r.to, subject: "✅ Velora Studio — Test Email", body: "This is a test email from Velora Studio.\n\nIf you received this, your email system is working perfectly!\n\nSent at: " + nowStamp() + "\nFrom: " + connected});
+  if(result.success){
+    saveEmailLog({invoiceId:"TEST",to:r.to,subject:"Test Email",body:"Velora test",client:"Test",status:"sent"});
+    toast("Test sent!","Check your inbox","green");
+    render();
+  }else{
+    toast("Test failed",result.error,"red");
+  }
 }
 
 /* ==================== MODALS ==================== */
@@ -878,7 +876,9 @@ function renderSidebar(){
 }
 function renderBottom(){
   const path=state.page+(state.subPage?" &gt; "+state.subPage:"");
-  $("#bottombar").innerHTML=`<div>Velora Studio v7.0&nbsp; | &nbsp;${esc(DB.config.companyName)}&nbsp; | &nbsp;Currency: ${esc(currency())}&nbsp; | &nbsp;Tax: ${num2(DB.config.taxRatePct)}%&nbsp; | &nbsp;Email: Active</div><div class="right">Page: ${path}</div>`;
+  const connected = getConnectedEmail();
+  const emailStatus = connected ? `Gmail: ${esc(connected)}` : `Gmail: Not connected`;
+  $("#bottombar").innerHTML=`<div>Velora Studio v7.0&nbsp; | &nbsp;${esc(DB.config.companyName)}&nbsp; | &nbsp;Currency: ${esc(currency())}&nbsp; | &nbsp;Tax: ${num2(DB.config.taxRatePct)}%&nbsp; | &nbsp;${emailStatus}</div><div class="right">Page: ${path}</div>`;
 }
 
 function tblHead(cols){return `<div class="tbl-head">${cols.map(c=>{const st=(c.w?`width:${c.w}px;`:"")+(c.flex?"flex:1;min-width:0;":"")+(c.align?`text-align:${c.align};`:"");return `<div class="th ${c.flex?"flex":""} ${c.align==="right"?"right":""}" style="${st}">${esc(c.label)}</div>`;}).join("")}</div>`;}
@@ -1094,7 +1094,8 @@ function pagePayments(){
 }
 function pageEmailLog(){
   const logs = DB.emailLog.filter(e=>matchSearch(e.to,e.subject,e.invoiceId,e.client));
-  let h = `<div class="row" style="justify-content:space-between;align-items:center;"><div><div class="page-h1">Email Log</div><div class="page-sub">${DB.emailLog.length} emails · ${DB.emailLog.filter(e=>e.status==="sent").length} sent</div></div><button class="btn green" data-action="email-test">✉ Send Test</button></div>`;
+  const connected = getConnectedEmail();
+  let h = `<div class="row" style="justify-content:space-between;align-items:center;"><div><div class="page-h1">Email Log</div><div class="page-sub">${DB.emailLog.length} emails · ${DB.emailLog.filter(e=>e.status==="sent").length} sent${connected ? " · From: "+esc(connected) : ""}</div></div><button class="btn green" data-action="email-test">✉ Send Test</button></div>`;
   if(!DB.emailLog.length) return h + emptyState("No emails yet","Open any invoice and choose 'Email Invoice'","View Invoices","nav-sales");
   const cols=[{label:"ID",w:140},{label:"DATE",w:150},{label:"TO",flex:true},{label:"SUBJECT",w:240},{label:"STATUS",w:110}];
   h += `<div class="mt18">` + tblHead(cols);
@@ -1163,12 +1164,30 @@ function pageAged(){
   return h;
 }
 function pageSettings(){
-  const emOk = EMAIL_BACKEND_URL && EMAIL_BACKEND_URL.indexOf("PASTE")===-1;
+  const connected = getConnectedEmail();
   return `<div class="page-h1">Settings</div>
     <div class="card mt18" style="padding:14px 20px;"><div style="font-size:15px;font-weight:700;">${esc(DB.config.companyName)}</div><div style="font-size:12px;color:var(--muted);margin-top:5px;">${esc(DB.config.companyEmail)} &nbsp;|&nbsp; Tax: ${num2(DB.config.taxRatePct)}% &nbsp;|&nbsp; Currency: ${esc(currency())}</div></div>
-    <div class="card mt14" style="padding:14px 20px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:14px;font-weight:700;">📧 Email Backend</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;">${emOk?"Configured. Emails will send automatically.":"Not configured."}</div></div>${emOk?`<span class="status-pill sent">ACTIVE</span>`:`<span class="status-pill failed">NOT SET</span>`}</div>
-      <div class="row mt14"><button class="btn green" data-action="email-test">✉ Send Test Email</button><button class="btn blue" data-action="goto-email-log">📬 Email Log (${DB.emailLog.length})</button><button class="btn amber" data-action="fetch-replies">🔄 Check Replies</button></div>
+    <div class="card mt14" style="padding:16px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div style="flex:1;min-width:240px;">
+          <div style="font-size:14px;font-weight:700;">📧 Gmail Connection</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;">
+            ${connected
+              ? "Connected as <b style='color:var(--gold);'>"+esc(connected)+"</b><br>Emails will be sent <b>from your Gmail</b>. Replies come to <b>your inbox</b>."
+              : "Connect your Gmail to send invoices from your own email.<br>We never see your password. Google handles everything securely."}
+          </div>
+        </div>
+        ${connected ? `<span class="status-pill sent">CONNECTED</span>` : `<span class="status-pill failed">NOT CONNECTED</span>`}
+      </div>
+      <div class="row mt14" style="align-items:center;">
+        ${connected
+          ? `<button class="btn green" data-action="email-test">✉ Send Test Email</button>
+             <button class="btn blue" data-action="goto-email-log">📬 Email Log (${DB.emailLog.length})</button>
+             <button class="btn amber" data-action="fetch-replies">🔄 Check Replies</button>
+             <button class="btn red" data-action="disconnect-gmail">Disconnect Gmail</button>`
+          : `<button class="btn green" data-action="connect-gmail" style="height:40px;padding:0 24px;font-size:13.5px;font-weight:700;">🔗 Connect Gmail</button>
+             <div style="font-size:11.5px;color:var(--muted);align-self:center;">Takes 10 seconds. Emails will come from <b style="color:var(--gold);">your Gmail</b>.</div>`}
+      </div>
     </div>
     <div class="row mt18"><button class="btn blue" data-action="edit-company">Edit Company Info</button><button class="btn blue" data-action="view-data">View Raw Data</button><button class="btn amber" data-action="load-sample">Load Sample Data</button></div>
     <div class="row mt14"><button class="btn red" data-action="reset-all">Reset All Data</button><button class="btn amber" data-action="edit-tax">Edit Tax Rate (${num2(DB.config.taxRatePct)}%)</button><button class="btn green" data-action="export-invoices">Export Invoices CSV</button></div>
@@ -1188,7 +1207,7 @@ function pageAbout(){
 - Chart of Accounts
 - Journal & Reports
 - Bank Reconciliation
-- Email Sending
+- Email Sending (from YOUR Gmail)
 - Email Replies Inbox
 - Beautiful Sound Effects
 - Backup & Restore`)}
@@ -1265,6 +1284,8 @@ async function handleAction(action,id,el){
     case "email-log-click":emailLogActions(id);break;
     case "email-test":testEmailBackend();break;
     case "fetch-replies":fetchReplies();break;
+    case "connect-gmail":connectGmail();break;
+    case "disconnect-gmail":if(await confirmBox("Disconnect Gmail?\n\nYou can reconnect anytime.","Disconnect")) disconnectGmail();break;
     case "goto-email-log":navigate("EmailLog","");break;
     case "edit-company":editCompany();break;
     case "edit-tax":editTax();break;
@@ -1549,6 +1570,24 @@ async function loadSample(){
   saveDB();state.page="Dashboard";state.subPage="";render();
   toast("Sample data loaded","4 Products · 3 Clients · 3 Invoices","green");
 }
+
+/* ==================== OAUTH CALLBACK HANDLER ==================== */
+(function handleOAuthReturn(){
+  if(window.location.hash && window.location.hash.indexOf("#connected=") === 0){
+    try{
+      const data = JSON.parse(decodeURIComponent(window.location.hash.slice(11)));
+      setGmailTokens(data);
+      history.replaceState(null, "", window.location.pathname);
+      setTimeout(()=>{
+        toast("Gmail connected! 🎉", data.email, "green");
+        render();
+      }, 600);
+    }catch(e){
+      console.error("OAuth parse error:", e);
+    }
+  }
+})();
+
 (function init(){
   if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccounts();
   if(!Array.isArray(DB.emailLog))DB.emailLog=[];
@@ -1556,9 +1595,10 @@ async function loadSample(){
   saveDB();
   initOnboarding();
   render();
+  // Auto-check replies every 2 minutes if connected
   setInterval(()=>{
     const ov = document.getElementById("onboarding");
-    if(EMAIL_BACKEND_URL && ov && ov.style.display === "none"){
+    if(getConnectedEmail() && ov && ov.style.display === "none"){
       fetchReplies().catch(()=>{});
     }
   }, 120000);
