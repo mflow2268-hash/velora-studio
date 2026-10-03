@@ -690,7 +690,7 @@ async function fetchReplies(){
     const res = await fetch(BACKEND_URL + "/api/replies", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokens: t.tokens, subject: "" })
+      body: JSON.stringify({ tokens: t.tokens, subject: "Invoice" })
     });
     const data = await res.json();
     if(data && Array.isArray(data.replies)){
