@@ -474,7 +474,7 @@ function clearGmailTokens(){
 }
 function isGmailConnected(){
   const t = getGmailTokens();
-  return !!(t && t.tokens && (t.tokens.access_token || t.tokens.refresh_token));
+  return !!(t && t.tokens && t.tokens.access_token);
 }
 function getConnectedEmail(){
   const t = getGmailTokens();
@@ -1584,6 +1584,25 @@ async function loadSample(){
   if(window.location.hash && window.location.hash.indexOf("#connected=") === 0){
     try{
       const data = JSON.parse(decodeURIComponent(window.location.hash.slice(11)));
+      // CHECK: Kya tokens sahi hain ya error hai?
+      if(!data.tokens){
+        toast("Connection failed", "No tokens received from Google", "red");
+        history.replaceState(null, "", window.location.pathname);
+        return;
+      }
+      if(data.tokens.error){
+        const errMsg = data.tokens.error_description || data.tokens.error;
+        toast("Google error: " + data.tokens.error, errMsg, "red");
+        console.error("OAuth error from Google:", data.tokens);
+        history.replaceState(null, "", window.location.pathname);
+        return;
+      }
+      if(!data.tokens.access_token){
+        toast("Connection failed", "No access token. Check Google Cloud settings.", "red");
+        console.error("Missing access_token:", data.tokens);
+        history.replaceState(null, "", window.location.pathname);
+        return;
+      }
       setGmailTokens(data);
       history.replaceState(null, "", window.location.pathname);
       setTimeout(()=>{
@@ -1592,6 +1611,8 @@ async function loadSample(){
       }, 600);
     }catch(e){
       console.error("OAuth parse error:", e);
+      toast("Connection failed", String(e.message || e), "red");
+      history.replaceState(null, "", window.location.pathname);
     }
   }
 })();
