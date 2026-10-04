@@ -472,9 +472,17 @@ function setGmailTokens(t){
 function clearGmailTokens(){
   try{ localStorage.removeItem("velora_gmail_tokens"); }catch(e){}
 }
+function isGmailConnected(){
+  const t = getGmailTokens();
+  return !!(t && t.tokens && (t.tokens.access_token || t.tokens.refresh_token));
+}
 function getConnectedEmail(){
   const t = getGmailTokens();
-  return (t && t.email) ? t.email : null;
+  if(!t) return null;
+  return t.email || null;
+}
+function getConnectedDisplay(){
+  return getConnectedEmail() || "your Gmail account";
 }
 async function connectGmail(){
   try{
@@ -723,11 +731,11 @@ async function fetchReplies(){
 
 function emailComposer(invId){
   const inv = DB.invoices.find(i=>i.id===invId); if(!inv){ toast("Invoice not found",invId,"red"); return; }
-  const connected = getConnectedEmail();
-  if(!connected){
+  if(!isGmailConnected()){
     toast("Connect Gmail first","Go to Settings → Connect Gmail","red");
     return;
   }
+  const connected = getConnectedDisplay();
   const ctx = buildInvoiceContext(inv);
   const client = DB.clients.find(c=>c.name.toLowerCase()===String(inv.client).toLowerCase()) || {};
   const defaultTo = client.email || "";
@@ -785,12 +793,13 @@ function emailComposer(invId){
 }
 
 async function testEmailBackend(){
-  const connected = getConnectedEmail();
-  if(!connected){
+  if(!isGmailConnected()){
     toast("Gmail not connected","Go to Settings → Connect Gmail","red");
     return;
   }
-  const r = await formModal("Send Test Email",[{key:"to",label:"Send test email to",value: connected, required:true, placeholder:"your-email@gmail.com"}],"Send Test");
+  const connected = getConnectedDisplay();
+  const defaultTo = getConnectedEmail() || DB.config.senderEmail || DB.config.companyEmail;
+  const r = await formModal("Send Test Email",[{key:"to",label:"Send test email to",value: defaultTo, required:true, placeholder:"your-email@gmail.com"}],"Send Test");
   if(!r) return;
   toast("Sending test...","Please wait","blue");
   playSend();
@@ -876,8 +885,7 @@ function renderSidebar(){
 }
 function renderBottom(){
   const path=state.page+(state.subPage?" &gt; "+state.subPage:"");
-  const connected = getConnectedEmail();
-  const emailStatus = connected ? `Gmail: ${esc(connected)}` : `Gmail: Not connected`;
+  const emailStatus = isGmailConnected() ? `Gmail: ${esc(getConnectedDisplay())}` : `Gmail: Not connected`;
   $("#bottombar").innerHTML=`<div>Velora Studio v7.0&nbsp; | &nbsp;${esc(DB.config.companyName)}&nbsp; | &nbsp;Currency: ${esc(currency())}&nbsp; | &nbsp;Tax: ${num2(DB.config.taxRatePct)}%&nbsp; | &nbsp;${emailStatus}</div><div class="right">Page: ${path}</div>`;
 }
 
@@ -1094,8 +1102,7 @@ function pagePayments(){
 }
 function pageEmailLog(){
   const logs = DB.emailLog.filter(e=>matchSearch(e.to,e.subject,e.invoiceId,e.client));
-  const connected = getConnectedEmail();
-  let h = `<div class="row" style="justify-content:space-between;align-items:center;"><div><div class="page-h1">Email Log</div><div class="page-sub">${DB.emailLog.length} emails · ${DB.emailLog.filter(e=>e.status==="sent").length} sent${connected ? " · From: "+esc(connected) : ""}</div></div><button class="btn green" data-action="email-test">✉ Send Test</button></div>`;
+  let h = `<div class="row" style="justify-content:space-between;align-items:center;"><div><div class="page-h1">Email Log</div><div class="page-sub">${DB.emailLog.length} emails · ${DB.emailLog.filter(e=>e.status==="sent").length} sent${isGmailConnected() ? " · From: "+esc(getConnectedDisplay()) : ""}</div></div><button class="btn green" data-action="email-test">✉ Send Test</button></div>`;
   if(!DB.emailLog.length) return h + emptyState("No emails yet","Open any invoice and choose 'Email Invoice'","View Invoices","nav-sales");
   const cols=[{label:"ID",w:140},{label:"DATE",w:150},{label:"TO",flex:true},{label:"SUBJECT",w:240},{label:"STATUS",w:110}];
   h += `<div class="mt18">` + tblHead(cols);
@@ -1164,7 +1171,8 @@ function pageAged(){
   return h;
 }
 function pageSettings(){
-  const connected = getConnectedEmail();
+  const connected = isGmailConnected();
+  const displayEmail = getConnectedDisplay();
   return `<div class="page-h1">Settings</div>
     <div class="card mt18" style="padding:14px 20px;"><div style="font-size:15px;font-weight:700;">${esc(DB.config.companyName)}</div><div style="font-size:12px;color:var(--muted);margin-top:5px;">${esc(DB.config.companyEmail)} &nbsp;|&nbsp; Tax: ${num2(DB.config.taxRatePct)}% &nbsp;|&nbsp; Currency: ${esc(currency())}</div></div>
     <div class="card mt14" style="padding:16px 20px;">
@@ -1173,7 +1181,7 @@ function pageSettings(){
           <div style="font-size:14px;font-weight:700;">📧 Gmail Connection</div>
           <div style="font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;">
             ${connected
-              ? "Connected as <b style='color:var(--gold);'>"+esc(connected)+"</b><br>Emails will be sent <b>from your Gmail</b>. Replies come to <b>your inbox</b>."
+              ? "Connected as <b style='color:var(--gold);'>"+esc(displayEmail)+"</b><br>Emails will be sent <b>from your Gmail</b>. Replies come to <b>your inbox</b>."
               : "Connect your Gmail to send invoices from your own email.<br>We never see your password. Google handles everything securely."}
           </div>
         </div>
@@ -1579,7 +1587,7 @@ async function loadSample(){
       setGmailTokens(data);
       history.replaceState(null, "", window.location.pathname);
       setTimeout(()=>{
-        toast("Gmail connected! 🎉", data.email, "green");
+        toast("Gmail connected! 🎉", data.email || "You can now send emails from your Gmail", "green");
         render();
       }, 600);
     }catch(e){
@@ -1595,10 +1603,9 @@ async function loadSample(){
   saveDB();
   initOnboarding();
   render();
-  // Auto-check replies every 2 minutes if connected
   setInterval(()=>{
     const ov = document.getElementById("onboarding");
-    if(getConnectedEmail() && ov && ov.style.display === "none"){
+    if(isGmailConnected() && ov && ov.style.display === "none"){
       fetchReplies().catch(()=>{});
     }
   }, 120000);
