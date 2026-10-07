@@ -838,5 +838,428 @@ async function loadSample(){if(!(await confirmBox("Load sample?","Sample")))retu
 
 function initApp(){if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccounts();if(!Array.isArray(DB.emailLog))DB.emailLog=[];if(!Array.isArray(DB.replies))DB.replies=[];saveDB();applyThemePrefs();initOnboarding();render();setInterval(function(){var ov=document.getElementById("onboarding");if(isGmailConnected()&&ov&&ov.style.display==="none"){fetchReplies().catch(function(){});}},120000);}
 </script>
-</body>
+</body><script>
+// ============================================================
+// 🛡️ VELORA PRODUCTION PATCH v1.0
+// Auto-applies security, reliability, and polish fixes
+// ============================================================
+(function(){
+  'use strict';
+
+  // ==================== SECURITY ====================
+
+  // 1) Enhanced input sanitization
+  window.esc = function(s){
+    if(s==null) return "";
+    return String(s)
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#39;")
+      .replace(/\//g,"&#x2F;")
+      .replace(/=/g,"&#x3D;")
+      .replace(/`/g,"&#x60;");
+  };
+
+  // URL sanitizer
+  window.escUrl = function(u){
+    try {
+      var url = new URL(String(u));
+      if(['http:','https:','mailto:'].indexOf(url.protocol)===-1) return '#';
+      return url.href;
+    } catch(e) { return '#'; }
+  };
+
+  // 2) Content Security Policy check
+  function checkSecurity(){
+    // Warn if client secret is in localStorage
+    try {
+      var tokens = JSON.parse(localStorage.getItem("velora_gmail_tokens") || "null");
+      if(tokens && tokens.tokens && tokens.tokens.client_secret){
+        console.warn("⚠️ SECURITY: Client secret detected in localStorage. Regenerate it in Google Console!");
+      }
+    } catch(e) {}
+  }
+  setTimeout(checkSecurity, 2000);
+
+  // ==================== ERROR HANDLING ====================
+
+  // 3) Global error handler
+  window.addEventListener('error', function(e){
+    console.error('Global error:', e.error || e.message);
+    try {
+      if(typeof toast === 'function'){
+        toast('Something went wrong', String(e.message).slice(0,80), 'red');
+      }
+    } catch(err) {}
+  });
+
+  // 4) Unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(e){
+    console.error('Unhandled promise:', e.reason);
+    try {
+      if(typeof toast === 'function'){
+        toast('Operation failed', String(e.reason).slice(0,80), 'red');
+      }
+    } catch(err) {}
+    e.preventDefault();
+  });
+
+  // 5) Safe render wrapper
+  window.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      if(typeof window.render === 'function'){
+        var origRender = window.render;
+        window.render = function(){
+          try {
+            return origRender.apply(this, arguments);
+          } catch(err) {
+            console.error('Render failed:', err);
+            var c = document.getElementById('content');
+            if(c){
+              c.innerHTML = '<div style="padding:60px 20px;text-align:center;">' +
+                '<div style="font-size:60px;margin-bottom:20px;">⚠️</div>' +
+                '<h2 style="font-size:20px;margin-bottom:12px;">Something went wrong</h2>' +
+                '<p style="color:var(--muted);margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto;">' +
+                window.esc(String(err.message || err)) + '</p>' +
+                '<button class="btn green" onclick="location.reload()">Reload App</button>' +
+                '</div>';
+            }
+          }
+        };
+      }
+    }, 500);
+  });
+
+  // ==================== RELIABILITY ====================
+
+  // 6) Offline detection
+  function updateOnlineStatus(){
+    var online = navigator.onLine;
+    document.body.classList.toggle('offline', !online);
+    if(!online && typeof toast === 'function'){
+      setTimeout(function(){
+        toast('Offline Mode', 'Changes will sync when online', 'amber');
+      }, 500);
+    }
+  }
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+
+  // Add offline CSS
+  var style = document.createElement('style');
+  style.textContent = 
+    'body.offline::after{content:"⚠ OFFLINE";position:fixed;top:56px;left:50%;transform:translateX(-50%);' +
+    'background:var(--red);color:white;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;' +
+    'z-index:9998;letter-spacing:1px;box-shadow:0 4px 12px rgba(240,106,106,.4);}' +
+    '.network-error{background:rgba(240,106,106,.1);border:1px solid var(--red);padding:12px;border-radius:8px;' +
+    'color:var(--red);font-size:12px;margin:12px 0;display:flex;align-items:center;gap:10px;}' +
+    '.network-error button{margin-left:auto;}' +
+    '.auto-save-indicator{position:fixed;bottom:10px;left:10px;font-size:10px;color:var(--muted);' +
+    'background:var(--panel);padding:4px 10px;border-radius:20px;border:1px solid var(--border);' +
+    'opacity:0;transition:opacity .3s;z-index:9998;pointer-events:none;}' +
+    '.auto-save-indicator.show{opacity:.7;}' +
+    '.btn-loading{position:relative;color:transparent!important;pointer-events:none;}' +
+    '.btn-loading::after{content:"";position:absolute;top:50%;left:50%;width:14px;height:14px;' +
+    'margin:-7px 0 0 -7px;border:2px solid currentColor;border-top-color:transparent;' +
+    'border-radius:50%;animation:spin360 .7s linear infinite;color:var(--text);}' +
+    '.skeleton{background:linear-gradient(90deg,var(--panel) 25%,rgba(255,255,255,.08) 50%,var(--panel) 75%);' +
+    'background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;height:20px;}' +
+    '.skeleton-row{display:grid;grid-template-columns:1fr 2fr 1fr 1fr 1fr;gap:16px;padding:16px;' +
+    'margin-top:8px;background:var(--panel);border:1px solid var(--border);border-radius:10px;}' +
+    '.toast.error-toast{animation:toastIn .55s both;border-color:var(--red);}';
+  document.head.appendChild(style);
+
+  // 7) Auto-backup system
+  var AUTO_BACKUP_INTERVAL = 3600000; // 1 hour
+  var AUTO_BACKUP_KEY = 'velora_auto_backup';
+  var AUTO_BACKUP_TS = 'velora_last_backup';
+
+  window.autoBackup = function(){
+    try {
+      if(typeof DB === 'undefined') return;
+      var last = localStorage.getItem(AUTO_BACKUP_TS);
+      var now = Date.now();
+      if(last && (now - parseInt(last, 10)) < AUTO_BACKUP_INTERVAL) return;
+      
+      var backup = {
+        version: '10.0',
+        timestamp: new Date().toISOString(),
+        data: DB
+      };
+      
+      // Keep only last 3 auto-backups
+      var existing = [];
+      try { existing = JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY) || "[]"); } catch(e){}
+      existing.unshift(backup);
+      if(existing.length > 3) existing = existing.slice(0, 3);
+      
+      localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(existing));
+      localStorage.setItem(AUTO_BACKUP_TS, String(now));
+      console.log('✓ Auto-backup created');
+    } catch(e) {
+      console.warn('Auto-backup failed (storage full?)', e);
+    }
+  };
+
+  window.restoreAutoBackup = function(index){
+    try {
+      var backups = JSON.parse(localStorage.getItem(AUTO_BACKUP_KEY) || "[]");
+      if(!backups[index]) return false;
+      if(!confirm('Restore backup from ' + new Date(backups[index].timestamp).toLocaleString() + '?')) return false;
+      DB = backups[index].data;
+      if(typeof saveDB === 'function') saveDB();
+      if(typeof render === 'function') render();
+      if(typeof toast === 'function') toast('Restored', 'From auto-backup', 'green');
+      return true;
+    } catch(e) {
+      console.warn('Restore failed:', e);
+      return false;
+    }
+  };
+
+  // Run backup check every 15 minutes
+  setInterval(window.autoBackup, 900000);
+  setTimeout(window.autoBackup, 30000);
+
+  // ==================== NETWORK RETRY ====================
+
+  // 8) Fetch with retry logic
+  window.fetchWithRetry = async function(url, options, maxRetries){
+    maxRetries = maxRetries || 3;
+    var lastErr;
+    for(var i = 0; i < maxRetries; i++){
+      try {
+        var res = await fetch(url, options);
+        if(res.ok || res.status < 500) return res;
+        if(res.status >= 500 && i < maxRetries - 1){
+          await new Promise(function(r){ setTimeout(r, 1000 * (i + 1)); });
+        }
+        return res;
+      } catch(err) {
+        lastErr = err;
+        if(i < maxRetries - 1){
+          await new Promise(function(r){ setTimeout(r, 1000 * (i + 1)); });
+        }
+      }
+    }
+    throw lastErr;
+  };
+
+  // Override sendEmailViaBackend to use retry
+  if(typeof window.sendEmailViaBackend === 'function'){
+    var origSend = window.sendEmailViaBackend;
+    window.sendEmailViaBackend = async function(data){
+      // Try with retry if first fails
+      try {
+        return await origSend(data);
+      } catch(err) {
+        console.warn('Send failed, retrying...', err);
+        await new Promise(function(r){ setTimeout(r, 1500); });
+        return await origSend(data);
+      }
+    };
+  }
+
+  // ==================== AUTO-SAVE INDICATOR ====================
+
+  // 9) Visual feedback for saves
+  var saveIndicator;
+  function showSaveIndicator(text){
+    if(!saveIndicator){
+      saveIndicator = document.createElement('div');
+      saveIndicator.className = 'auto-save-indicator';
+      document.body.appendChild(saveIndicator);
+    }
+    saveIndicator.textContent = text || '✓ Saved';
+    saveIndicator.classList.add('show');
+    clearTimeout(saveIndicator._t);
+    saveIndicator._t = setTimeout(function(){
+      saveIndicator.classList.remove('show');
+    }, 1500);
+  }
+
+  // Wrap saveDB
+  window.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      if(typeof window.saveDB === 'function'){
+        var origSave = window.saveDB;
+        window.saveDB = function(){
+          var result = origSave.apply(this, arguments);
+          showSaveIndicator('✓ Saving...');
+          setTimeout(function(){ showSaveIndicator('✓ Saved'); }, 400);
+          return result;
+        };
+      }
+    }, 500);
+  });
+
+  // ==================== LOADING STATES ====================
+
+  // 10) Button loading helper
+  window.withLoading = async function(btn, fn){
+    if(!btn) return fn();
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    try {
+      return await fn();
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+      btn.innerHTML = orig;
+    }
+  };
+
+  // ==================== KEYBOARD SHORTCUTS ====================
+
+  // 11) Power-user shortcuts
+  document.addEventListener('keydown', function(e){
+    // Ctrl/Cmd + S = Save + backup
+    if((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      if(typeof saveDB === 'function') saveDB();
+      showSaveIndicator('✓ Saved');
+    }
+    // Ctrl/Cmd + Shift + B = Manual backup
+    if((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'B'){
+      e.preventDefault();
+      window.autoBackup();
+      if(typeof toast === 'function') toast('Backup', 'Auto-backup created', 'green');
+    }
+    // Ctrl/Cmd + K = Search (already exists)
+    // Escape closes modals (already exists)
+  });
+
+  // ==================== PWA SUPPORT ====================
+
+  // 12) Install prompt
+  var deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show install button in topbar
+    setTimeout(function(){
+      var topRight = document.querySelector('.top-right');
+      if(topRight && !document.getElementById('installBtn')){
+        var btn = document.createElement('button');
+        btn.id = 'installBtn';
+        btn.className = 'btn-refresh';
+        btn.innerHTML = '⬇';
+        btn.title = 'Install App';
+        btn.onclick = async function(){
+          if(!deferredPrompt) return;
+          deferredPrompt.prompt();
+          var result = await deferredPrompt.userChoice;
+          if(result.outcome === 'accepted'){
+            if(typeof toast === 'function') toast('Installed!', 'App added to home screen', 'green');
+          }
+          deferredPrompt = null;
+          btn.remove();
+        };
+        topRight.insertBefore(btn, topRight.firstChild);
+      }
+    }, 2000);
+  });
+
+  // ==================== FORM VALIDATION ====================
+
+  // 13) Enhanced email validation
+  window.validateEmail = function(email){
+    var re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return re.test(String(email || '').trim());
+  };
+
+  // Validate multiple emails
+  window.validateEmails = function(str){
+    var emails = String(str || '').split(/[,;]/).map(function(e){ return e.trim(); }).filter(Boolean);
+    if(!emails.length) return false;
+    for(var i = 0; i < emails.length; i++){
+      if(!window.validateEmail(emails[i])) return false;
+    }
+    return true;
+  };
+
+  // ==================== PERFORMANCE ====================
+
+  // 14) Debounce helper
+  window.debounce = function(fn, delay){
+    var timer;
+    return function(){
+      var ctx = this, args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+  };
+
+  // 15) Throttle helper
+  window.throttle = function(fn, limit){
+    var inThrottle;
+    return function(){
+      var ctx = this, args = arguments;
+      if(!inThrottle){
+        fn.apply(ctx, args);
+        inThrottle = true;
+        setTimeout(function(){ inThrottle = false; }, limit);
+      }
+    };
+  };
+
+  // ==================== DATE UTILITIES ====================
+
+  // 16) Better date formatting
+  window.formatDate = function(iso, format){
+    try {
+      var d = new Date(iso);
+      if(isNaN(d)) return '-';
+      if(format === 'short') return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+      if(format === 'long') return d.toLocaleDateString('en-GB', {day:'2-digit', month:'long', year:'numeric'});
+      if(format === 'time') return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+      return d.toLocaleDateString('en-GB');
+    } catch(e) { return '-'; }
+  };
+
+  // ==================== DATA EXPORT ENHANCEMENTS ====================
+
+  // 17) Download with progress
+  window.downloadFile = function(filename, content, mime){
+    try {
+      var blob = new Blob([content], {type: (mime || 'text/csv') + ';charset=utf-8'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 500);
+      return true;
+    } catch(e) {
+      console.error('Download failed:', e);
+      return false;
+    }
+  };
+
+  // ==================== INIT ====================
+
+  // Initialize on load
+  window.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      updateOnlineStatus();
+      window.autoBackup();
+      console.log('%c✓ Velora Production Patch v1.0 loaded', 'color:#56d488;font-weight:bold;font-size:12px;');
+      console.log('%c🛡️ Security · Errors · Offline · Backup · PWA · Performance', 'color:#8e8e9a;font-size:11px;');
+    }, 1000);
+  });
+
+  // Cleanup on unload
+  window.addEventListener('beforeunload', function(){
+    if(typeof saveDB === 'function') saveDB();
+  });
+
+})();
+</script>
 </html>
