@@ -1052,13 +1052,17 @@ function initApp(){if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccou
     var origSend = window.sendEmailViaBackend;
     window.sendEmailViaBackend = async function(data){
       // Try with retry if first fails
-      try {
-        return await origSend(data);
-      } catch(err) {
-        console.warn('Send failed, retrying...', err);
+var result = await origSend(data);
+      var errText = String((result && result.error) || '').toLowerCase();
+      var isNetwork = errText.indexOf('network') !== -1 ||
+                      errText.indexOf('fetch') !== -1 ||
+                      errText.indexOf('timeout') !== -1;
+      if(!result.success && isNetwork){
+        console.warn('Network failed, retrying...', result.error);
         await new Promise(function(r){ setTimeout(r, 1500); });
-        return await origSend(data);
+        result = await origSend(data);
       }
+      return result;
     };
   }
 
