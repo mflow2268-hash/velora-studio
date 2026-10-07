@@ -838,7 +838,7 @@ async function loadSample(){if(!(await confirmBox("Load sample?","Sample")))retu
 
 function initApp(){if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccounts();if(!Array.isArray(DB.emailLog))DB.emailLog=[];if(!Array.isArray(DB.replies))DB.replies=[];saveDB();applyThemePrefs();initOnboarding();render();setInterval(function(){var ov=document.getElementById("onboarding");if(isGmailConnected()&&ov&&ov.style.display==="none"){fetchReplies().catch(function(){});}},120000);}
 </script>
-</body><script>
+<script>
 // ============================================================
 // 🛡️ VELORA PRODUCTION PATCH v1.0
 // Auto-applies security, reliability, and polish fixes
@@ -1262,4 +1262,5 @@ function initApp(){if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccou
 
 })();
 </script>
+</body>
 </html>
