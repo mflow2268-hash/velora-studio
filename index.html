@@ -371,6 +371,14 @@ textarea.mono{width:100%;height:320px;background:#0a0a10;border:1px solid var(--
 .gcal-now-line{position:absolute;left:0;right:0;height:2px;background:#ea4335;box-shadow:0 0 8px rgba(234,67,53,.6);z-index:10;pointer-events:none;}
 .gcal-now-line::before{content:'';position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:#ea4335;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+.sync-pill{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;margin-right:8px;border-radius:15px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted-2);}
+.sync-pill.ok .sync-dot{background:var(--green);}
+.sync-pill.busy .sync-dot{background:var(--amber);}
+.sync-pill.err .sync-dot{background:var(--red);}
+</style>
 </head>
 <body>
 <div id="splash"><div class="sp-logo"><svg viewBox="0 0 32 32" style="width:46px;height:46px;display:block" role="img" aria-label="Velora Studio" focusable="false"><path d="M6 8 L16 26 L26 8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="6.5" r="2.8" fill="currentColor"/></svg></div></div>
@@ -450,7 +458,106 @@ function defaultAccounts(){return [["1000","Cash","Asset",0],["1010","Bank","Ass
 function defaultTaxCodes(){return [{id:"TX-001",name:"GST 17%",rate:17,desc:"Standard GST"},{id:"TX-002",name:"GST 5%",rate:5,desc:"Reduced GST"},{id:"TX-003",name:"Zero Rated",rate:0,desc:"Zero rated"},{id:"TX-004",name:"Exempt",rate:0,desc:"Exempt"}];}
 function defaultDB(){return {config:{companyName:"Your Company",companyEmail:"you@company.com",taxRatePct:10,currency:"PKR",senderName:"",senderEmail:"",defaultSubject:"Invoice {invoice_id} from {company_name}",defaultBody:"Dear {client},\n\nPlease find attached invoice {invoice_id} for {amount}.\n\nDue Date: {due_date}\nStatus: {status}\n\nThank you for your business.\n\nBest regards,\n{company_name}"},invoices:[],clients:[],products:[],vendors:[],expenses:[],estimates:[],creditNotes:[],accounts:defaultAccounts(),journal:[],employees:[],payroll:[],bankTxn:[],payments:[],emailLog:[],salesReceipts:[],purchaseOrders:[],bills:[],billPayments:[],vendorCredits:[],recurring:[],taxCodes:defaultTaxCodes(),timeEntries:[],budgets:[],statements:[]};}
 var DB=(function(){try{var r=localStorage.getItem(STORE_KEY);if(r){var p=JSON.parse(r);var b=defaultDB();var m=Object.assign(b,p);m.config=Object.assign(b.config,p.config||{});if(!Array.isArray(m.accounts)||!m.accounts.length)m.accounts=defaultAccounts();if(!Array.isArray(m.taxCodes)||!m.taxCodes.length)m.taxCodes=defaultTaxCodes();["emailLog","salesReceipts","purchaseOrders","bills","billPayments","vendorCredits","recurring","timeEntries","budgets","statements","payments"].forEach(function(k){if(!Array.isArray(m[k]))m[k]=[];});return m;}}catch(e){}return defaultDB();})();
-var saveT;function saveDB(){clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}},60);}
+var saveT;function saveDB(quiet){if(!quiet){DB.meta=DB.meta||{};DB.meta.updatedAt=new Date().toISOString();}clearTimeout(saveT);saveT=setTimeout(function(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}if(!quiet)cloudSchedulePush();},60);}
+/* ---------- Cloud sync (Supabase + Google). Optional: app works fully offline without it. ---------- */
+var CLOUD_URL="https://yevgubaiyjnlecfstwek.supabase.co";
+var CLOUD_KEY="sb_publishable_-Kzk8SylTazwFugg-tJQcA_CIrSwjPn";
+var CLOUD_TABLE="velora_data";
+var CLOUD_SYNC_KEY="velora_cloud_synced_at";
+var CLOUD={client:null,user:null,state:"local",ready:false,error:""};
+var cloudPushT,cloudRetryT;
+function cloudLastSynced(){try{return Number(localStorage.getItem(CLOUD_SYNC_KEY))||0;}catch(e){return 0;}}
+function cloudSetLastSynced(ms){try{localStorage.setItem(CLOUD_SYNC_KEY,String(ms));}catch(e){}}
+function localUpdatedMs(){return Date.parse((DB.meta&&DB.meta.updatedAt)||"")||0;}
+function refreshSyncUI(){try{renderTopbar();}catch(e){}}
+function cloudInit(){
+  if(!(window.supabase&&window.supabase.createClient)){CLOUD.state="unavailable";refreshSyncUI();return;}
+  try{CLOUD.client=window.supabase.createClient(CLOUD_URL,CLOUD_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});}catch(e){CLOUD.state="unavailable";refreshSyncUI();return;}
+  CLOUD.client.auth.onAuthStateChange(function(ev,session){
+    CLOUD.user=session&&session.user?session.user:null;
+    if(!CLOUD.user){CLOUD.ready=false;CLOUD.state="local";refreshSyncUI();if(state.page==="Settings")render();return;}
+    if(ev==="SIGNED_IN"||ev==="INITIAL_SESSION"){cloudPull();}else{refreshSyncUI();}
+  });
+  window.addEventListener("online",function(){if(CLOUD.user)cloudPull();});
+}
+function cloudSchedulePush(){if(!CLOUD.user||!CLOUD.ready)return;CLOUD.state="pending";refreshSyncUI();clearTimeout(cloudPushT);cloudPushT=setTimeout(cloudPush,1200);}
+function cloudScheduleRetry(){clearTimeout(cloudRetryT);cloudRetryT=setTimeout(function(){if(CLOUD.user)cloudPull();},30000);}
+async function cloudPush(){
+  if(!CLOUD.client||!CLOUD.user||!CLOUD.ready)return;
+  var snap=JSON.parse(JSON.stringify(DB));
+  var stamp=(snap.meta&&snap.meta.updatedAt)||new Date().toISOString();
+  CLOUD.state="syncing";refreshSyncUI();
+  try{
+    var res=await CLOUD.client.from(CLOUD_TABLE).upsert({user_id:CLOUD.user.id,data:snap,updated_at:stamp},{onConflict:"user_id"});
+    if(res.error)throw res.error;
+    cloudSetLastSynced(Date.parse(stamp));
+    CLOUD.error="";
+    CLOUD.state=localUpdatedMs()>Date.parse(stamp)?"pending":"synced";
+    if(CLOUD.state==="pending")cloudSchedulePush();
+  }catch(e){CLOUD.state="error";CLOUD.error=e.message||"Sync failed";cloudScheduleRetry();}
+  refreshSyncUI();
+}
+function cloudAdopt(remote,remoteT){
+  var base=defaultDB();
+  DB=Object.assign(base,remote);
+  DB.config=Object.assign(base.config,remote.config||{});
+  if(!Array.isArray(DB.accounts)||!DB.accounts.length)DB.accounts=defaultAccounts();
+  if(!Array.isArray(DB.taxCodes)||!DB.taxCodes.length)DB.taxCodes=defaultTaxCodes();
+  ["emailLog","salesReceipts","purchaseOrders","bills","billPayments","vendorCredits","recurring","timeEntries","budgets","statements","payments"].forEach(function(k){if(!Array.isArray(DB[k]))DB[k]=[];});
+  DB.meta={updatedAt:new Date(remoteT).toISOString()};
+  cloudSetLastSynced(remoteT);
+  CLOUD.ready=true;CLOUD.state="synced";CLOUD.error="";
+  saveDB(true);render();toast("Synced","Cloud data loaded","green");
+}
+async function cloudPull(){
+  if(!CLOUD.client||!CLOUD.user)return;
+  CLOUD.state="syncing";CLOUD.error="";refreshSyncUI();
+  try{
+    var res=await CLOUD.client.from(CLOUD_TABLE).select("data,updated_at").eq("user_id",CLOUD.user.id).maybeSingle();
+    if(res.error)throw res.error;
+    var row=res.data,synced=cloudLastSynced(),localNew=localUpdatedMs()>synced;
+    if(!row){CLOUD.ready=true;await cloudPush();return;}
+    var remoteT=Date.parse(row.updated_at)||0;
+    if(remoteT<=synced){CLOUD.ready=true;if(localNew){await cloudPush();}else{CLOUD.state="synced";refreshSyncUI();}return;}
+    if(localNew){
+      // Both sides changed: keep a safety copy of the cloud data, then let the user choose.
+      try{download("Velora_Cloud_Copy_"+todayISO().replace(/-/g,"")+".json",JSON.stringify(row.data,null,2),"application/json");}catch(e){}
+      var useCloud=await confirmBox("Cloud par naya data hai aur is device par bhi unsaved changes hain. OK = cloud wala data rakhein (is device ke changes replace honge). Cancel = is device ka data cloud par bhej dein. Cloud copy ki backup file download ho chuki hai.","Sync conflict");
+      if(!useCloud){CLOUD.ready=true;await cloudPush();return;}
+    }
+    cloudAdopt(row.data,remoteT);
+  }catch(e){CLOUD.state="error";CLOUD.error=e.message||"Sync failed";CLOUD.ready=false;cloudScheduleRetry();refreshSyncUI();}
+}
+async function cloudSignIn(){
+  if(!CLOUD.client){toast("Cloud not available","Check your internet connection and reload.","red");return;}
+  var r=await CLOUD.client.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
+  if(r&&r.error)toast("Sign-in failed",r.error.message,"red");
+}
+async function cloudSignOut(){
+  if(!(await confirmBox("Sign out? Aap ka data is device par rahega, sirf cloud sync band hoga.","Sign out")))return;
+  try{await CLOUD.client.auth.signOut();}catch(e){}
+  CLOUD.user=null;CLOUD.ready=false;CLOUD.state="local";
+  render();toast("Signed out","Data is still on this device","blue");
+}
+function syncPillHtml(){
+  var label="Local only",cls="",title="Cloud sync";
+  if(CLOUD.state==="unavailable"){label="Local only";}
+  else if(!CLOUD.user){label="Not signed in";}
+  else if(CLOUD.state==="synced"){label="Synced";cls=" ok";}
+  else if(CLOUD.state==="pending"){label="Saving…";cls=" busy";}
+  else if(CLOUD.state==="syncing"){label="Syncing…";cls=" busy";}
+  else if(CLOUD.state==="error"){label="Sync failed";cls=" err";title="Cloud sync: "+(CLOUD.error||"error");}
+  return '<button class="sync-pill'+cls+'" data-action="cloud-open" title="'+esc(title)+'"><span class="sync-dot"></span>'+label+'</button>';
+}
+function cloudCardHtml(){
+  var u=CLOUD.user,st=CLOUD.state,msg;
+  if(!CLOUD.client)msg="Cloud sync abhi available nahi (internet ya script block ho sakta hai). App offline mein normal chalti hai.";
+  else if(!u)msg="Abhi sign in nahi hain. Data sirf is browser mein hai. Google se sign in karein taake data backup ho aur doosre devices par mile.";
+  else if(st==="error")msg="Sync fail ho gaya: "+esc(CLOUD.error)+". Internet check karein. Data is device par safe hai aur dobara koshish hogi.";
+  else msg="Signed in as <b style='color:var(--gold);'>"+esc(u.email||"Google account")+"</b>. "+(st==="synced"?"Sab changes cloud par save hain.":"Changes save ho rahe hain…");
+  var buttons=!CLOUD.client?"":!u?'<button class="btn green" data-action="cloud-signin" style="height:40px;padding:0 24px;font-size:13.5px;font-weight:700;">Sign in with Google</button>':'<button class="btn green" data-action="cloud-sync">Sync now</button><button class="btn red" data-action="cloud-signout">Sign out</button>';
+  return '<div class="card mt18" style="padding:18px 20px;"><div style="font-size:14px;font-weight:700;">☁ Cloud sync</div><div style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6;">'+msg+'</div><div class="row mt14" style="align-items:center;">'+buttons+'</div></div>';
+}
 var $=function(s){return document.querySelector(s);};
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 function safeNum(v){var n=parseFloat(String(v).replace(/,/g,""));if(!isFinite(n))return 0;return Math.max(-1e15,Math.min(1e15,n));}
@@ -503,7 +610,7 @@ var NAV=[
   {group:"COMMS"},{icon:"✉",label:"Emails",page:"EmailLog"},
   {group:"SYSTEM"},{icon:"🎨",label:"Appearance",page:"Appearance"},{icon:"⚙",label:"Settings",page:"Settings"},{icon:"ⓘ",label:"About",page:"About"}
 ];
-function renderTopbar(){var sInner=state.search?'<div class="qmark">x</div><div class="stxt filter">Filter: '+esc(state.search)+'</div><button class="s-clear" data-action="clear-search">x Clear</button>':'<div class="qmark">?</div><div class="stxt">Search invoices, clients, payments...</div>';$("#topbar").innerHTML='<div class="logo-zone"><div class="logo-glow"></div><div class="logo"><svg viewBox="0 0 32 32" style="width:18px;height:18px;display:block" role="img" aria-label="Velora Studio" focusable="false"><path d="M6 8 L16 26 L26 8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="6.5" r="2.8" fill="currentColor"/></svg></div></div><div class="searchbox" data-action="search">'+sInner+'</div><div class="top-right"><button class="btn-refresh" data-action="refresh">R</button><button class="btn-create-top" data-action="quick-create">+&nbsp; Create</button></div>';}
+function renderTopbar(){var sInner=state.search?'<div class="qmark">x</div><div class="stxt filter">Filter: '+esc(state.search)+'</div><button class="s-clear" data-action="clear-search">x Clear</button>':'<div class="qmark">?</div><div class="stxt">Search invoices, clients, payments...</div>';$("#topbar").innerHTML='<div class="logo-zone"><div class="logo-glow"></div><div class="logo"><svg viewBox="0 0 32 32" style="width:18px;height:18px;display:block" role="img" aria-label="Velora Studio" focusable="false"><path d="M6 8 L16 26 L26 8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="6.5" r="2.8" fill="currentColor"/></svg></div></div><div class="searchbox" data-action="search">'+sInner+'</div><div class="top-right">'+syncPillHtml()+'<button class="btn-refresh" data-action="refresh">R</button><button class="btn-create-top" data-action="quick-create">+&nbsp; Create</button></div>';}
 function renderSidebar(){var h="";NAV.forEach(function(item){if(item.group){h+='<div class="nav-group">'+esc(item.group)+'</div>';return;}var active=state.page===item.page;var badge="";if(item.page==="EmailLog"&&DB.emailLog.length)badge='<span class="nav-badge">'+DB.emailLog.length+'</span>';h+='<div class="nav-item '+(active?"active":"")+'" data-action="nav" data-page="'+esc(item.page)+'" data-sub="'+esc(item.sub||"")+'"><div class="nav-ico">'+esc(item.icon)+'</div><div class="nav-lbl">'+esc(item.label)+'</div>'+badge+'</div>';if(active&&item.children){item.children.forEach(function(ch){var sa=state.subPage===ch.sub||(state.subPage===""&&ch.sub===item.sub);h+='<div class="sub-item '+(sa?"active":"")+'" data-action="nav" data-page="'+esc(ch.page)+'" data-sub="'+esc(ch.sub)+'"><div class="sub-dot"></div><div class="sub-lbl">'+esc(ch.label)+'</div></div>';});}});$("#sidebar").innerHTML=h;}
 function tblHead(cols){return '<div class="tbl-head">'+cols.map(function(c){var st=(c.w?"width:"+c.w+"px;":"")+(c.flex?"flex:1;min-width:0;":"")+(c.align?"text-align:"+c.align+";":"");return '<div class="th '+(c.flex?"flex":"")+' '+(c.align==="right"?"right":"")+'" style="'+st+'">'+esc(c.label)+'</div>';}).join("")+'</div>';}
 function tblRow(cols,cells,attrs){attrs=attrs||{};var clickable=!!attrs.action;return '<div class="tbl-row '+(clickable?"clickable":"")+'" '+(attrs.action?'data-action="'+esc(attrs.action)+'"':"")+' '+(attrs.id?'data-id="'+esc(attrs.id)+'"':"")+'>'+cols.map(function(c,i){var v=cells[i];var st=(c.w?"width:"+c.w+"px;":"")+(c.flex?"flex:1;min-width:0;":"")+(c.align?"text-align:"+c.align+";":"");var cls="td "+(c.flex?"flex":"")+" "+(c.align==="right"?"right":"");var col=(v&&v.color)?v.color:(c.color||"");var txt=(v&&typeof v==="object")?v.text:v;var bold=(v&&v.bold)?"font-weight:700;":"";return '<div class="'+cls+'" style="'+st+(col?"color:"+col+";":"")+bold+'">'+(txt===undefined?"":txt)+'</div>';}).join("")+'</div>';}
@@ -552,8 +659,8 @@ function ledgerSummary(){var S=0,Tout=0,G=0,P=0,E=0,Tin=0,EG=0;DB.invoices.forEa
 function maybeBackupBanner(c){try{var last=+localStorage.getItem("velora_last_backup")||0;var hasData=DB.invoices.length||DB.clients.length||DB.expenses.length;if(hasData&&Date.now()-last>7*86400000){c.insertAdjacentHTML("afterbegin",'<div class="card" style="padding:12px 16px;margin-bottom:16px;border-color:var(--amber);display:flex;justify-content:space-between;align-items:center;gap:12px;"><div style="font-size:12.5px;">Aapka data sirf is browser mein save hai. Abhi tak koi backup nahi, ya 7 din se zyada purana hai. Backup download karein.</div><button class="btn amber" data-action="backup">Download backup</button></div>');}}catch(e){}}
 function pagePL(){var L=ledgerSummary();var nc=L.Net>=0?"var(--green)":"var(--red)";var row=function(lbl,val,col){return '<div style="display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border);"><span>'+esc(lbl)+'</span><span style="font-weight:700;color:'+(col||"var(--text)")+';">'+esc(money(val))+'</span></div>';};return '<div class="page-h1">Profit & Loss</div><div class="card mt18" style="padding:18px 22px;max-width:620px;">'+row("Sales (excl. GST)",L.S,"var(--green)")+row("Expenses (excl. GST)",L.E,"var(--red)")+'<div style="display:flex;justify-content:space-between;padding:14px 4px 4px;font-size:16px;"><span style="font-weight:700;">Net profit</span><span style="font-weight:700;color:'+nc+';">'+esc(money(L.Net))+'</span></div></div><div class="card mt14" style="padding:14px 22px;max-width:620px;font-size:12px;color:var(--muted);">GST collected: '+esc(money(L.Tout))+' &middot; GST paid on expenses: '+esc(money(L.Tin))+' &middot; Net GST payable: '+esc(money(L.Tout-L.Tin))+'<br>Draft invoices are not included. Figures are calculated from invoices, payments and expenses.</div>';}
 function pageBS(){var L=ledgerSummary();var ta=r2(L.AR+L.Cash+L.Recoverable);var tle=r2(L.TaxPayable+L.Net);var diff=r2(ta-tle);var ok=Math.abs(diff)<0.01;var row=function(lbl,val){return '<div style="display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border);"><span>'+esc(lbl)+'</span><span style="font-weight:600;">'+esc(money(val))+'</span></div>';};return '<div class="page-h1">Balance Sheet</div><div class="card mt18" style="padding:18px 22px;max-width:620px;"><div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px;margin-bottom:6px;">ASSETS</div>'+row("Cash & bank (payments received less expenses paid)",L.Cash)+row("Accounts receivable (outstanding, incl. GST)",L.AR)+row("GST recoverable on expenses",L.Recoverable)+'<div style="display:flex;justify-content:space-between;padding:10px 4px;font-weight:700;"><span>Total assets</span><span>'+esc(money(ta))+'</span></div><div style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:1px;margin:14px 0 6px;">LIABILITIES &amp; EQUITY</div>'+row("GST payable (collected on invoices)",L.TaxPayable)+row("Retained earnings (net profit)",L.Net)+'<div style="display:flex;justify-content:space-between;padding:10px 4px;font-weight:700;"><span>Total liabilities &amp; equity</span><span>'+esc(money(tle))+'</span></div></div><div class="card mt14" style="padding:12px 22px;max-width:620px;font-size:12px;color:'+(ok?"var(--green)":"var(--red)")+';">'+(ok?"&#10003; Balance sheet balanced":"&#9888; Difference of "+esc(money(diff))+" &mdash; check records")+'</div>';}
-function pageAbout(){return '<div class="page-h1">About Velora Studio</div><div class="card mt18" style="padding:18px 22px;max-width:620px;font-size:13px;line-height:1.7;"><b>Velora Studio</b> &middot; Version 1.0<br>Invoicing, payments, expenses, customers, products, sales tax, and financial reports (Profit &amp; Loss, Balance Sheet).<br><br><b>Where your data lives.</b> All records are stored in this browser only. Export a backup from Settings regularly and keep it somewhere safe.</div>';}
-function pageSettings(){var connected=isGmailConnected();return '<div class="page-h1">Settings</div><div class="card mt18" style="padding:16px 20px;"><div style="font-size:15px;font-weight:700;">'+esc(DB.config.companyName)+'</div><div style="font-size:12px;color:var(--muted);margin-top:5px;">'+esc(DB.config.companyEmail)+' &nbsp;|&nbsp; Default tax: '+esc(DB.taxCodes&&DB.taxCodes[0]?DB.taxCodes[0].name:"None")+' &nbsp;|&nbsp; Currency: '+esc(currency())+'</div></div><div class="card mt14" style="padding:18px 20px;"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div style="flex:1;min-width:240px;"><div style="font-size:14px;font-weight:700;">📧 Gmail Connection</div><div style="font-size:11px;color:var(--muted-2);margin-top:4px;">Invoice emails aapke Gmail se jati hain. Tokens sirf is browser mein save hote hain; Disconnect par remove ho jate hain.</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;">'+(connected?"Connected as <b style='color:var(--gold);'>"+esc(getConnectedDisplay())+"</b>":"Connect your Gmail to send invoices from your own email.")+'</div></div>'+(connected?'<span class="status-pill sent">CONNECTED</span>':'<span class="status-pill failed">NOT CONNECTED</span>')+'</div><div class="row mt14" style="align-items:center;">'+(connected?'<button class="btn green" data-action="email-test">✉ Test</button><button class="btn blue" data-action="goto-email-log">📬 Log</button><button class="btn red" data-action="disconnect-gmail">Disconnect</button>':'<button class="btn green" data-action="connect-gmail" style="height:40px;padding:0 24px;font-size:13.5px;font-weight:700;">🔗 Connect Gmail</button>')+'</div></div><div class="row mt18"><button class="btn blue" data-action="edit-company">Edit Company</button><button class="btn blue" data-action="view-data">View Data</button></div><div class="row mt14"><button class="btn red" data-action="reset-all">Reset All</button><button class="btn amber" data-action="edit-tax">Tax ('+num2(DB.config.taxRatePct)+'%)</button><button class="btn green" data-action="export-invoices">Export</button></div><div class="row mt14"><button class="btn green" data-action="export-all">Export All</button><button class="btn blue" data-action="edit-currency">Currency</button><button class="btn green" data-action="backup">Backup</button><button class="btn amber" data-action="restore">Restore</button></div>';}
+function pageAbout(){return '<div class="page-h1">About Velora Studio</div><div class="card mt18" style="padding:18px 22px;max-width:620px;font-size:13px;line-height:1.7;"><b>Velora Studio</b> &middot; Version 1.1<br>Invoicing, payments, expenses, customers, products, sales tax, and financial reports (Profit &amp; Loss, Balance Sheet).<br><br><b>Where your data lives.</b> All records are stored in this browser only. Export a backup from Settings regularly and keep it somewhere safe.</div>';}
+function pageSettings(){var connected=isGmailConnected();return '<div class="page-h1">Settings</div>'+cloudCardHtml()+'<div class="card mt18" style="padding:16px 20px;"><div style="font-size:15px;font-weight:700;">'+esc(DB.config.companyName)+'</div><div style="font-size:12px;color:var(--muted);margin-top:5px;">'+esc(DB.config.companyEmail)+' &nbsp;|&nbsp; Default tax: '+esc(DB.taxCodes&&DB.taxCodes[0]?DB.taxCodes[0].name:"None")+' &nbsp;|&nbsp; Currency: '+esc(currency())+'</div></div><div class="card mt14" style="padding:18px 20px;"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div style="flex:1;min-width:240px;"><div style="font-size:14px;font-weight:700;">📧 Gmail Connection</div><div style="font-size:11px;color:var(--muted-2);margin-top:4px;">Invoice emails aapke Gmail se jati hain. Tokens sirf is browser mein save hote hain; Disconnect par remove ho jate hain.</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.6;">'+(connected?"Connected as <b style='color:var(--gold);'>"+esc(getConnectedDisplay())+"</b>":"Connect your Gmail to send invoices from your own email.")+'</div></div>'+(connected?'<span class="status-pill sent">CONNECTED</span>':'<span class="status-pill failed">NOT CONNECTED</span>')+'</div><div class="row mt14" style="align-items:center;">'+(connected?'<button class="btn green" data-action="email-test">✉ Test</button><button class="btn blue" data-action="goto-email-log">📬 Log</button><button class="btn red" data-action="disconnect-gmail">Disconnect</button>':'<button class="btn green" data-action="connect-gmail" style="height:40px;padding:0 24px;font-size:13.5px;font-weight:700;">🔗 Connect Gmail</button>')+'</div></div><div class="row mt18"><button class="btn blue" data-action="edit-company">Edit Company</button><button class="btn blue" data-action="view-data">View Data</button></div><div class="row mt14"><button class="btn red" data-action="reset-all">Reset All</button><button class="btn amber" data-action="edit-tax">Tax ('+num2(DB.config.taxRatePct)+'%)</button><button class="btn green" data-action="export-invoices">Export</button></div><div class="row mt14"><button class="btn green" data-action="export-all">Export All</button><button class="btn blue" data-action="edit-currency">Currency</button><button class="btn green" data-action="backup">Backup</button><button class="btn amber" data-action="restore">Restore</button></div>';}
 var PAGES={Dashboard:pageDashboard,Sales:pageSales,Clients:pageClients,Payments:pagePayments,Expenses:pageExpenses,Vendors:pageVendors,Bills:pageBills,Bank:pageBank,Products:pageProducts,Accounting:pageAccounting,SalesTax:pageSalesTax,TaxRates:pageTaxRates,Reports:pageReports,EmailLog:pageEmailLog,Appearance:pageAppearance,Settings:pageSettings,About:pageAbout};
 function bindChartHover(){var wrap=document.getElementById("revChartWrap");if(!wrap)return;var tooltip=document.getElementById("revTooltip");var hoverLine=document.getElementById("revHoverLine");var meta=window.__revChartMeta;if(!tooltip||!meta)return;var svg=wrap.querySelector(".chart-svg");var dots=wrap.querySelectorAll(".chart-dot");var zones=wrap.querySelectorAll("[data-hover]");if(!svg)return;var W=900,padL=12,padR=12;var chartW=W-padL-padR;var showAt=function(i){var val=meta.values[i];var rect=svg.getBoundingClientRect();var xRatio=(padL+(i*(chartW/(meta.values.length-1))))/W;var x=xRatio*rect.width;tooltip.innerHTML='<div class="tt-date">'+meta.labels[i]+'</div><b>'+meta.currency+' '+val.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})+'</b>';tooltip.style.left=x+"px";tooltip.style.top="20px";tooltip.classList.add("show");var lineX=padL+(i*(chartW/(meta.values.length-1)));hoverLine.setAttribute("x1",lineX);hoverLine.setAttribute("x2",lineX);hoverLine.style.opacity="1";dots.forEach(function(d,idx){d.classList.toggle("active",idx===i);});};var hideAll=function(){tooltip.classList.remove("show");hoverLine.style.opacity="0";dots.forEach(function(d){d.classList.remove("active");});};zones.forEach(function(z){z.addEventListener("mouseenter",function(){showAt(+z.dataset.hover);});z.addEventListener("mouseleave",hideAll);});svg.addEventListener("mouseleave",hideAll);}
 function render(){refreshInvoiceStatuses();showLoadingBar();renderTopbar();renderSidebar();var c=$("#content");var fn=PAGES[state.page]||pageDashboard;c.innerHTML=fn();maybeBackupBanner(c);c.scrollTop=0;requestAnimationFrame(function(){c.querySelectorAll(".kpi .v[data-count]").forEach(function(el){var val=parseFloat(el.dataset.count)||0;var prefix=el.dataset.prefix||"";countUpValue(el,val,prefix);});if(state.page==="Dashboard")bindChartHover();});}
@@ -636,6 +743,10 @@ async function handleAction(action,id,el){
     case "edit-currency":editCurrency();break;
     case "view-data":viewRawData();break;
     case "reset-all":resetAll();break;
+    case "cloud-open":navigate("Settings","");break;
+    case "cloud-signin":cloudSignIn();break;
+    case "cloud-signout":cloudSignOut();break;
+    case "cloud-sync":cloudPull();break;
     case "export-invoices":exportSheetCSV("invoices");break;
     case "export-all":exportAllCSV();break;
     case "backup":backupFile();break;
@@ -776,7 +887,7 @@ async function editCurrency(){var r=await formModal("Currency",[{key:"currency",
 function viewRawData(){var json=JSON.stringify(DB,null,2);var ov=openModal('<div class="modal-title">Raw Data</div><div class="modal-body"><textarea class="mono" readonly>'+esc(json)+'</textarea></div><div class="modal-actions"><button class="btn ghost" data-close>Close</button></div>',{width:Math.min(720,window.innerWidth-40)});ov.querySelector("[data-close]").onclick=function(){closeModal(ov);};}
 async function resetAll(){if(!(await confirmBox("DELETE ALL DATA?","Reset")))return;if(!(await confirmBox("Final?","Reset")))return;var keep=Object.assign({},DB.config);DB=defaultDB();DB.config=keep;state.search="";state.page="Dashboard";state.subPage="";saveDB();render();toast("Reset","","red");}
 (function handleOAuthReturn(){if(window.location.hash&&window.location.hash.indexOf("#connected=")===0){try{var data=JSON.parse(decodeURIComponent(window.location.hash.slice(11)));if(!data.tokens){toast("Failed","No tokens","red");history.replaceState(null,"",window.location.pathname);return;}if(data.tokens.error){toast("Error",data.tokens.error,"red");history.replaceState(null,"",window.location.pathname);return;}if(!data.tokens.access_token){toast("Failed","No token","red");history.replaceState(null,"",window.location.pathname);return;}setGmailTokens(data);history.replaceState(null,"",window.location.pathname);setTimeout(function(){toast("Gmail connected! 🎉",data.email||"","green");render();},600);}catch(e){toast("Failed",String(e.message||e),"red");history.replaceState(null,"",window.location.pathname);}}})();
-(function init(){if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccounts();if(!Array.isArray(DB.emailLog))DB.emailLog=[];saveDB();applyThemePrefs();initOnboarding();render();})();
+(function init(){if(!DB.accounts||!DB.accounts.length)DB.accounts=defaultAccounts();if(!Array.isArray(DB.emailLog))DB.emailLog=[];saveDB(true);applyThemePrefs();initOnboarding();cloudInit();render();})();
 </script>
 </body>
 </html>
